@@ -1,17 +1,34 @@
 #!/usr/bin/env python3
 """
 样本量充足性测试：留一法 + 同型异型拆分 + 特征饱和度曲线
+
+用法:
+  python scripts/test_sample_sufficiency.py
+  python scripts/test_sample_sufficiency.py --input inputs/template_stripped_markdown/ --output outputs/debug/sample_sufficiency_test.md
 """
 
+import argparse
 import json
 import re
+import sys
 import itertools
 from pathlib import Path
 from collections import Counter
 
-INPUT_DIR = Path(r"G:\开发项目\skill项目\inputs\template_stripped_markdown")
-OUTPUT_JSON = Path(r"G:\开发项目\skill项目\outputs\debug\sample_sufficiency_test.json")
-OUTPUT_MD = Path(r"G:\开发项目\skill项目\outputs\debug\sample_sufficiency_test.md")
+
+def parse_args():
+    p = argparse.ArgumentParser(description="样本量充足性测试：留一法 + 饱和度曲线")
+    p.add_argument("--input", default=None, help="模板剥离后的markdown目录（默认自动检测）")
+    p.add_argument("--output-json", default=None, help="JSON输出路径")
+    p.add_argument("--output-md", default=None, help="Markdown报告输出路径")
+    return p.parse_args()
+
+
+SCRIPT_DIR = Path(__file__).parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+DEFAULT_INPUT = PROJECT_ROOT / "inputs" / "template_stripped_markdown"
+DEFAULT_JSON = PROJECT_ROOT / "outputs" / "debug" / "sample_sufficiency_test.json"
+DEFAULT_MD = PROJECT_ROOT / "outputs" / "debug" / "sample_sufficiency_test.md"
 
 # ── 文档标签（项目类型）──
 DOC_TAGS = {
@@ -71,9 +88,9 @@ def extract_features(text: str) -> dict[str, float]:
     return features
 
 
-def load_docs():
+def load_docs(input_dir: Path):
     docs = {}
-    for f in sorted(INPUT_DIR.glob("*.md")):
+    for f in sorted(input_dir.glob("*.md")):
         text = f.read_text(encoding="utf-8")
         docs[f.name] = {"text": text, "tag": DOC_TAGS.get(f.name, "未知"), "chars": len(text)}
     return docs
@@ -153,13 +170,15 @@ def test_type_split(docs):
         tag = info["tag"]
         groups.setdefault(tag, []).append(name)
 
-    # 同型组：入园企业2篇
-    if "入园企业" in groups and len(groups["入园企业"]) >= 2:
-        same_type_names = groups["入园企业"][:2]
-        same_features = avg_features([extract_features(docs[n]["text"]) for n in same_type_names])
-        same_rank = feature_ranking(same_features)
-    else:
-        same_rank = []
+    # 同型组：同标签取前2篇
+    same_type_names = []
+    same_rank = []
+    for tag, names in groups.items():
+        if len(names) >= 2:
+            same_type_names = names[:2]
+            same_features = avg_features([extract_features(docs[n]["text"]) for n in same_type_names])
+            same_rank = feature_ranking(same_features)
+            break
 
     # 异型组：取三种类型各1篇
     cross_type_names = []
@@ -235,49 +254,76 @@ def test_saturation_curve(docs):
 
 
 # ══════════════════════════════════════════════════
+#  一句话结论生成
+# ══════════════════════════════════════════════════
+def generate_conclusion(t1, t2, t3, doc_count):
+    stable = t1["avg_distance"] < 0.25
+    n4 = t3.get(4, {})
+    n5 = t3.get(5, {})
+    sat_gain = (n5.get("avg_top6_overlap", 0) - n4.get("avg_top6_overlap", 0)) if (n4 and n5) else 99
+    saturated = sat_gain < 0.5
+
+    if doc_count >= 8 and stable and saturated:
+        return "✅ 样本充足", "当前样本量足够，DNA特征稳定且已饱和，可以直接用于提取。"
+    if stable and saturated:
+        return "✅ 样本基本够用", f"当前{doc_count}篇的特征排序稳定、曲线已饱和，够用。如需增强优先加不同类型文档。"
+    if stable and not saturated:
+        return "⚠️ 接近但未饱和", f"特征排序稳定但曲线仍在上升，建议补到8篇（不同类型）。"
+    if not stable:
+        return "❌ 样本不足", f"留一法波动较大({t1['avg_distance']:.2f})，当前{doc_count}篇不够稳，建议补到8篇以上。"
+    return "⚠️ 需要更多样本", "建议补充不同类型的文档后重新测试。"
+
+
+# ══════════════════════════════════════════════════
 #  MAIN
 # ══════════════════════════════════════════════════
 def main():
-    docs = load_docs()
+    args = parse_args()
+    input_dir = Path(args.input) if args.input else DEFAULT_INPUT
+    output_json = Path(args.output_json) if args.output_json else DEFAULT_JSON
+    output_md = Path(args.output_md) if args.output_md else DEFAULT_MD
+
+    if not input_dir.exists():
+        print(f"Error: 输入目录不存在: {input_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    docs = load_docs(input_dir)
+    if len(docs) < 2:
+        print(f"Error: 至少需要2篇文档才能运行测试，当前只有 {len(docs)} 篇", file=sys.stderr)
+        sys.exit(1)
+
     names = list(docs.keys())
     total_chars = sum(info["chars"] for info in docs.values())
 
-    print(f"加载 {len(docs)} 篇文档，总字数 {total_chars} 字符")
-    for n in names:
-        print(f"  [{docs[n]['tag']}] {n[:40]}... ({docs[n]['chars']}字)")
-
-    # Test 1
-    print("\n=== TEST 1: 留一法稳定性 ===")
     t1 = test_leave_one_out(docs)
-    for r in t1["per_doc"]:
-        print(f"  去掉 '{r['removed'][:40]}...' → rank距离={r['rank_distance']}")
-    print(f"  平均距离: {t1['avg_distance']}  {'✅ 稳定' if t1['stable'] else '❌ 不够稳'}")
-
-    # Test 2
-    print("\n=== TEST 2: 同型 vs 异型 ===")
     t2 = test_type_split(docs)
-    print(f"  同型2篇 vs 全量5篇: 距离={t2['same_vs_all_distance']}")
-    print(f"  异型3篇 vs 全量5篇: 距离={t2['cross_vs_all_distance']}")
-    print(f"  同型 top6: {t2['same_type_2docs']['rank_top6']}")
-    print(f"  异型 top6: {t2['cross_type_3docs']['rank_top6']}")
-    print(f"  全量 top6: {t2['all_5docs']['rank_top6']}")
-
-    # Test 3
-    print("\n=== TEST 3: 特征饱和度 ===")
     t3 = test_saturation_curve(docs)
-    for n in sorted(t3.keys()):
-        v = t3[n]
-        bar = "█" * int(v["avg_top6_overlap"] / 2)
-        print(f"  {n}篇 ({v['combinations']:2d}组合) | 距离={v['avg_rank_distance']} | top6重叠={v['avg_top6_overlap']}/6 {bar}")
 
-    # Save results
-    OUTPUT_JSON.parent.mkdir(parents=True, exist_ok=True)
+    verdict, explanation = generate_conclusion(t1, t2, t3, len(docs))
+
+    print("=" * 50)
+    print(f"  {verdict}")
+    print("=" * 50)
+    print(f"  {explanation}")
+    print("=" * 50)
+    print(f"  文档数: {len(docs)} 篇 | 总字数: {total_chars:,} 字")
+    print(f"  留一法波动: {t1['avg_distance']:.3f}")
+    n4 = t3.get(4, {})
+    n5 = t3.get(5, {})
+    if n4 and n5:
+        gain = n5["avg_top6_overlap"] - n4["avg_top6_overlap"]
+        print(f"  饱和度增益(4→5篇): +{gain:.1f} 特征")
+    print("=" * 50)
+
+    output_json.parent.mkdir(parents=True, exist_ok=True)
     results = {
         "total_docs": len(docs),
         "total_chars": total_chars,
+        "verdict": verdict,
+        "explanation": explanation,
         "doc_list": {n: {"tag": docs[n]["tag"], "chars": docs[n]["chars"]} for n in names},
         "test1_leave_one_out": t1,
-        "test2_type_split": {k: v for k, v in t2.items() if k != "same_type_2docs" and k != "cross_type_3docs" and k != "all_5docs"},
+        "test2_type_split": {k: v for k, v in t2.items() if k not in ("same_type_2docs", "cross_type_3docs", "all_5docs")},
         "test2_detail": {
             "same_type_top6": t2["same_type_2docs"]["rank_top6"],
             "cross_type_top6": t2["cross_type_3docs"]["rank_top6"],
@@ -287,12 +333,12 @@ def main():
         },
         "test3_saturation": t3,
     }
-    OUTPUT_JSON.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_json.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # Generate markdown report
     md_lines = []
-    md_lines.append("# 样本量充足性测试报告\n")
-    md_lines.append(f"**输入**：{len(docs)} 篇文档，总字数 {total_chars} 字符\n")
+    md_lines.append(f"# 样本量充足性测试报告\n")
+    md_lines.append(f"> **{verdict}** — {explanation}\n")
+    md_lines.append(f"**输入**：{len(docs)} 篇文档，总字数 {total_chars:,} 字符\n")
     md_lines.append("| 编号 | 类型 | 文件 | 字数 |")
     md_lines.append("|:---:|:---|:---|:---:|")
     for i, n in enumerate(names, 1):
@@ -370,10 +416,9 @@ def main():
     else:
         md_lines.append(f"\n### 最终结论：❌ 5 篇偏少，留一法不稳定，建议加到 8 篇。")
 
-    OUTPUT_MD.write_text("\n".join(md_lines), encoding="utf-8")
-    print(f"\n结果已保存：")
-    print(f"  JSON: {OUTPUT_JSON}")
-    print(f"  MD:   {OUTPUT_MD}")
+    output_md.write_text("\n".join(md_lines), encoding="utf-8")
+    print(f"\n报告已保存: {output_md}")
+    print(f"详细数据:  {output_json}")
 
 
 if __name__ == "__main__":
