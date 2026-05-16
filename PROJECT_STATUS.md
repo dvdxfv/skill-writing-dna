@@ -2,20 +2,90 @@
 
 ## 当前阶段
 
-`全链路闭环比对完成，最小可交付产物就绪`
+`文档与提示词生产就绪，待执行跨模型 Benchmark`
 
-5 篇正式样本已走通完整链路，DNA 提取 + 改写验证已完成一轮闭环。
+- ✅ 全链路闭环已跑通（5篇样本 → DNA提取 → 改写验证）
+- ✅ README.md 去敏完毕，流程图/诊断路径/检查清单完整
+- ✅ SKILL.md 提示词完善，两个强制停等节点（第4步DNA确认 + 第7步效果确认）已写入
+- ✅ 样本充足性测试脚本输出一句话结论
+- ⏳ **下一步：跨模型 Benchmark**（见文末）
 
-## 开发资源消耗
+---
 
-| 资源 | 用量 | Token 消耗（估算） | 费用（按 API 市价折算） |
-|:---|:---|:---|:---|
-| 开发时间 | 4 小时 | — | — |
-| Claude（Codex 环境） | 5 小时用量 | ~350,000–700,000 | ~$5–$11 |
-| ChatGPT（Codex 环境） | 5 小时用量 | ~225,000–1,125,000 | ~$2.5–$12.5 |
-| DeepSeek（Flash + Pro 混用） | API 调用 | 22,498,980 | 2.95 元 |
+## 今天完成的改动（按提交顺序）
 
-> Claude 和 ChatGPT 为订阅制套餐（$20/月），表中费用按其 API 标准价格（Claude Sonnet 4.6: $3/$15 每百万 token；GPT-5.1 codex: $2.50/$20 每百万 token）对估算 token 消耗做的折算参考。DeepSeek 为实际 API 计费金额。
+### 安全脱敏（3个commit）
+
+| commit | 内容 |
+|:---|:---|
+| `d47fd48` | 脱敏处理真实姓名"管航" |
+| `bb7728b` | 文件名脱敏 guanhang→user、管航→某人 |
+
+> 所有 git 跟踪文件中的真实姓名已替换为"某人"，文件名中的拼音已替换为"user"。本地 outputs 目录也做了批量替换。
+
+### README.md 文档重构（6个commit）
+
+| commit | 内容 |
+|:---|:---|
+| `fcdf443` | 流程图精简 + 诊断路径初版 + 模型矩阵标注 |
+| `a7b6c04` | 流程图重新设计——突出人工介入点（蓝色菱形） |
+| `46ddef3` | 恢复TD布局 + 精简到10节点 + 强化人工介入点样式 |
+| `e8b9251` | 样本多样性章节重写——增加实操指导和诊断联动 |
+| `de823dc` | **样本去敏**（去除绩效评价报告等具体案例→改为通用类型描述）+ **诊断路径完整重写**（4步决策树） |
+| `82bee5e` | 第4步和第7步检查指引（对称的4项检查表 + 排查路径） |
+
+**README.md 当前结构：**
+```
+1. 全流程总览（一句话流程 + 完整mermaid流程图）
+2. 🔵 第4步：DNA准确吗？—— 5项检查清单（热词图排第1）
+3. 🔵 第7步：效果满意吗？—— 4项检查清单 + 3步排查路径
+4. 关于样本（数量建议 + 类型多样性 + 好坏组合示例）
+5. 效果不好怎么办（4步诊断决策树 + 快速定位对照表）
+6. 使用方式 / 文件说明 / 开发指南
+```
+
+### SKILL.md 提示词完善（3个commit）
+
+| commit | 内容 |
+|:---|:---|
+| `82bee5e` | 流程A Step3：从"让用户确认"升级为"⏸️必须停下等用户确认"+ 4项检查清单 |
+| `caacac8` | 热词图作为DNA检查第1依据 + 流程B Step4拆分为停等(Step4)+交付(Step5) + 改写效果检查清单 |
+| `a63286e` | 明确要求模型用图片语法展示热词图 + 告知所有产出文件的完整路径 |
+
+**SKILL.md 当前两个强制停等节点：**
+
+| 节点 | 时机 | 检查项数 | 模型必须做的事 |
+|:---|:---|:---:|:---|
+| 🔵 第4步 | DNA提取完成后 | 5项（热词图/短语/句长/黑名单/开头结尾） | 展示热词图(PNG+路径) + 文字版DNA + 停下等回复 |
+| 🔵 第7步 | 改写+报告生成后 | 4项（AI味/像不像/信息/可用性） | 展示报告结论+改写全文(均带路径) + 停下等回复 |
+
+### 测试脚本改进（1个commit）
+
+| commit | 内容 |
+|:---|:---|
+| `3c519ae` | `test_sample_sufficiency.py` 输出一句话结论 + argparse参数化 + 去硬编码路径 |
+
+**测试脚本当前行为：**
+```
+运行: python scripts/test_sample_sufficiency.py
+
+输出:
+==================================================
+  ✅ 样本基本够用    （或 ❌样本不足 / ⚠️接近但未饱和）
+==================================================
+  当前5篇的特征排序稳定、曲线已饱和，够用。...
+==================================================
+  文档数: 5 篇 | 总字数: 26,470 字
+  留一法波动: 0.012
+  饱和度增益(4→5篇): +0.0 特征
+==================================================
+
+产出:
+  outputs/debug/sample_sufficiency_test.md   （详细报告，顶部有结论）
+  outputs/debug/sample_sufficiency_test.json （结构化数据）
+```
+
+---
 
 ## 已完成的完整链路
 
@@ -35,8 +105,9 @@ raw_docx_articles (5 DOCX)
 | DOCX→MD | `inputs/raw_docx_articles/` | `inputs/normalized_markdown/` | `scripts/docx_to_md.py` |
 | 非正文过滤 | `inputs/normalized_markdown/` | `inputs/filtered_markdown/` | `scripts/filter_non_prose.py` |
 | 模板剥离 | `inputs/filtered_markdown/` | `inputs/template_stripped_markdown/` | `scripts/strip_template.py` |
-| DNA 提取 | `inputs/template_stripped_markdown/` | `outputs/dna_profiles/` | 人工分析 + 复核 |
-| 改写验证 | `inputs/ai_drafts/new_ai_draft.docx` | `outputs/rewrite_runs/` | 人工操作（按 DNA） |
+| DNA 提取 | `inputs/template_stripped_markdown/` | `outputs/dna_profiles/` | `scripts/extract_dna.py`（自动统计+热词图） |
+| 样本测试 | `inputs/template_stripped_markdown/` | `outputs/debug/` | `scripts/test_sample_sufficiency.py`（留一法+饱和度曲线） |
+| 改写验证 | `inputs/ai_drafts/new_ai_draft.docx` | `outputs/rewrite_runs/` | `scripts/rewrite_with_dna.py` |
 
 ## DNA 最终产物
 
@@ -45,7 +116,8 @@ raw_docx_articles (5 DOCX)
 | `outputs/dna_profiles/user_dna_profile.md` | 人工提取 + 复核后的写作DNA画像（**正式主输出**） |
 | `outputs/dna_profiles/user_dna_evidence.md` | DNA 证据链说明 |
 | `outputs/dna_profiles/user_dna_profile.json` | DNA 结构化版本（可程序读取） |
-| `outputs/dna_profiles/user_dna_feature_cloud.png` | "DNA 特征云"可视化 |
+| `outputs/dna_profiles/user_dna_feature_cloud.png` | "DNA 特征云"可视化（特征云词云） |
+| `<用户名>-dna_hotwords.png` | **热词条形图**（extract_dna.py每次自动生成，DNA检查第一依据）|
 
 > `outputs/dna_profiles/某人-single-dna.json` 为早期单篇词频版，`user_auto_dna.json` 为自动统计版，均保留作历史参考，正式 DNA 以 `user_dna_profile.md` 为准。
 
@@ -63,18 +135,28 @@ raw_docx_articles (5 DOCX)
 
 ## 脚本清单
 
-| 脚本 | 状态 |
-|:---|:---|
-| `scripts/docx_to_md.py` | ✅ 已实现 |
-| `scripts/filter_non_prose.py` | ✅ 已实现 |
-| `scripts/strip_template.py` | ✅ 已实现（本项目中新增） |
-| `scripts/render_dna_feature_cloud.py` | ✅ 已实现（本项目中新增） |
-| `scripts/detect_ai_slop.py` | ✅ 已实现 |
-| `scripts/ai_slop_dict.py` | ✅ 已实现 |
-| `scripts/extract_dna.py` | ✅ 已实现（自动统计版，人工复核后产出正式画像） |
-| `scripts/extract_template_profile.py` | ✅ 已实现（模板画像提取，输出模板vs个人风格分界报告） |
-| `scripts/rewrite_with_dna.py` | ✅ 已实现（黑名单清除+AI连接词替换+签名短语植入） |
-| `scripts/generate_report.py` | ✅ 已实现（指标表+改动明细+原文对照报告） |
+| 脚本 | 状态 | 今日改动 |
+|:---|:---|:---|:---|
+| `scripts/docx_to_md.py` | ✅ 已实现 | — |
+| `scripts/filter_non_prose.py` | ✅ 已实现 | — |
+| `scripts/strip_template.py` | ✅ 已实现 | — |
+| `scripts/render_dna_feature_cloud.py` | ✅ 已实现 | — |
+| `scripts/detect_ai_slop.py` | ✅ 已实现 | — |
+| `scripts/ai_slop_dict.py` | ✅ 已实现 | — |
+| `scripts/extract_dna.py` | ✅ 已实现 | — |
+| `scripts/extract_template_profile.py` | ✅ 已实现 | — |
+| `scripts/rewrite_with_dna.py` | ✅ 已实现 | — |
+| `scripts/generate_report.py` | ✅ 已实现 | — |
+| `scripts/test_sample_sufficiency.py` | ✅ 已实现 | ✅ 新增一句话结论 + argparse + 去硬编码路径 |
+
+## 核心文档
+
+| 文件 | 角色 | 今日改动 |
+|:---|:---|:---|:---|
+| `README.md` | GitHub 面向用户的完整文档 | ✅ 大幅重写（去敏+流程图+双检查指引+诊断路径） |
+| `SKILL.md` | 模型在对话框里的行为指令（核心提示词） | ✅ 大幅增强（双强制停等+检查清单+文件路径告知） |
+| `config.yaml` | 用户可配置参数 | — |
+| `.gitignore` | Git 忽略规则（排除敏感数据） | — |
 
 ## 项目文件分类速查
 
@@ -102,6 +184,8 @@ inputs/normalized_markdown/     ← DOCX→MD 转换结果
 inputs/filtered_markdown/       ← 非正文过滤结果
 inputs/template_stripped_markdown/  ← 模板剥离结果
 outputs/rewrite_runs/new_ai_draft_extracted.md  ← AI草稿原始提取稿
+outputs/debug/sample_sufficiency_test.md         ← 样本测试报告
+outputs/debug/sample_sufficiency_test.json        ← 样本测试数据
 ```
 
 ### 参考留存（历史版本/外部样本）
@@ -126,21 +210,18 @@ docs/writing-dna-*.md               ← 项目设计文档
 |:---:|:---|:---|
 | 1-4 | ❌ 不足 | 无法区分单篇特有与跨篇稳定 |
 | 5 | ⚠️ 下限 | 刚好让稳定特征浮现，不确定项偏多 |
-| 8 | ✅ 甜点 | 不确定项收敛，大部分特征确认 |
+| 8 | ✅ 最佳 | 不确定项收敛，大部分特征确认 |
 | 12 | ✅ 上限 | 特征基本饱和，再增量边际收益极低 |
 
-## 当前明确未完
+---
 
-- `outputs/template_profiles/` 与 `outputs/reports/` 未产出内容（模板画像已在 debug/ 下产出，正式路径待用户确认）
-- 未做多作者交叉验证
-- 留一法稳定性测试已完成（脚本见 `scripts/test_sample_sufficiency.py`，报告见 `outputs/debug/sample_sufficiency_test.md`）
-- **跨模型 benchmark 未执行** — 设计方案如下
+## ⏭ 明天任务：跨模型 Benchmark
 
-## 跨模型 Benchmark 设计（占位，未跑）
+> **打开此文件后直接从这里开始。**
 
 ### 目标
 
-用同一份 DNA（`user_dna_profile.md`）和同一份 AI 草稿（`inputs/ai_drafts/new_ai_draft.docx`），让不同大模型分别执行改写，横向对比各模型对"写作 DNA 改写"任务的执行质量。
+用同一份 DNA 和同一份 AI 草稿，让不同大模型分别执行改写，横向对比各模型对"写作 DNA 改写"任务的执行质量。
 
 ### 待测模型矩阵
 
@@ -155,29 +236,37 @@ docs/writing-dna-*.md               ← 项目设计文档
 
 ### 统一输入
 
-- **DNA**：`outputs/dna_profiles/user_dna_profile.md` 中的 8 条改写规则
+- **DNA**：`outputs/dna_profiles/user_dna_profile.md` 中的改写规则
 - **改写对象**：`outputs/rewrite_runs/new_ai_draft_effective_input.md`（纯净正文输入稿）
-- **提示词**：统一 prompt，包含完整的 DNA 规则 + 改写边界约束
+- **提示词**：基于 `SKILL.md` 流程 B 的改写规则，统一 prompt
 
-### 评测维度（计划）
+### 评测维度
 
 | 维度 | 测量方式 |
 |:---|:---|
-| DNA 规则遵循度 | 人工逐条核验 8 条规则是否被落实 |
+| DNA 规则遵循度 | 人工逐条核验改写规则是否被落实 |
 | AI 味残留 | `scripts/detect_ai_slop.py` 打分 |
-| 信息完整性 | 原文关键事实（金额/人数/机构/政策）保留率 |
-| 风格相似度 | 与用户原笔 5 篇的句长/连接词/制度词分布对比 |
+| 信息完整性 | 原文关键事实保留率 |
+| 风格相似度 | 与用户原笔的句长/连接词分布对比 |
 | 可读性 | 人工盲评 |
 
 ### 预期产出
 
 | 文件 | 说明 |
 |:---|:---|
-| `outputs/model_benchmarks/` | 各模型改写结果存放目录 |
 | `outputs/model_benchmarks/{model_name}_rewritten.md` | 各模型改写稿 |
 | `outputs/model_benchmarks/benchmark_report.md` | 横向对比报告 |
 | `outputs/model_benchmarks/benchmark_scores.json` | 结构化评分数据 |
 
-### 当前状态
+### 完成后需更新
 
-⚪ 仅设计，未执行。所有脚本和 prompt 待明天实现。
+1. `PROJECT_STATUS.md` — benchmark 结果填入
+2. `README.md` — 模型矩阵部分从占位改为实测数据
+3. `SKILL.md` — 如发现某模型表现突出，可在推荐中标注
+
+---
+
+## 其他未完事项（优先级低于Benchmark）
+
+- `outputs/template_profiles/` 与 `outputs/reports/` 正式路径未产出（debug 下已有中间结果）
+- 未做多作者交叉验证
