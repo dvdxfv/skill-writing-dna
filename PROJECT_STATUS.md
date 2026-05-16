@@ -42,12 +42,12 @@ raw_docx_articles (5 DOCX)
 
 | 文件 | 说明 |
 |:---|:---|
-| `outputs/dna_profiles/guanhang_dna_profile.md` | 人工提取 + 复核后的写作DNA画像（**正式主输出**） |
-| `outputs/dna_profiles/guanhang_dna_evidence.md` | DNA 证据链说明 |
-| `outputs/dna_profiles/guanhang_dna_profile.json` | DNA 结构化版本（可程序读取） |
-| `outputs/dna_profiles/guanhang_dna_feature_cloud.png` | "DNA 特征云"可视化 |
+| `outputs/dna_profiles/user_dna_profile.md` | 人工提取 + 复核后的写作DNA画像（**正式主输出**） |
+| `outputs/dna_profiles/user_dna_evidence.md` | DNA 证据链说明 |
+| `outputs/dna_profiles/user_dna_profile.json` | DNA 结构化版本（可程序读取） |
+| `outputs/dna_profiles/user_dna_feature_cloud.png` | "DNA 特征云"可视化 |
 
-> `outputs/dna_profiles/某人-single-dna.json` 为早期单篇词频版，`guanhang_auto_dna.json` 为自动统计版，均保留作历史参考，正式 DNA 以 `guanhang_dna_profile.md` 为准。
+> `outputs/dna_profiles/某人-single-dna.json` 为早期单篇词频版，`user_auto_dna.json` 为自动统计版，均保留作历史参考，正式 DNA 以 `user_dna_profile.md` 为准。
 
 ## 改写验证产物
 
@@ -80,10 +80,10 @@ raw_docx_articles (5 DOCX)
 
 ### 最终产物（交付用）
 ```
-outputs/dna_profiles/guanhang_dna_profile.md
-outputs/dna_profiles/guanhang_dna_evidence.md
-outputs/dna_profiles/guanhang_dna_profile.json
-outputs/dna_profiles/guanhang_dna_feature_cloud.png
+outputs/dna_profiles/user_dna_profile.md
+outputs/dna_profiles/user_dna_evidence.md
+outputs/dna_profiles/user_dna_profile.json
+outputs/dna_profiles/user_dna_feature_cloud.png
 outputs/rewrite_runs/rewritten_draft.md
 outputs/rewrite_runs/rewrite_notes.md
 outputs/rewrite_runs/rewrite_debug.json
@@ -108,8 +108,8 @@ outputs/rewrite_runs/new_ai_draft_extracted.md  ← AI草稿原始提取稿
 ```
 outputs/dna_profiles/某人-single-dna.json       ← 早期单篇提取版
 outputs/dna_profiles/某人-single-dna_hotwords.png  ← 早期词频图
-outputs/dna_profiles/guanhang_auto_dna.json      ← 自动统计版
-outputs/dna_profiles/guanhang_auto_dna_hotwords.png ← 自动统计词频图
+outputs/dna_profiles/user_auto_dna.json      ← 自动统计版
+outputs/dna_profiles/user_auto_dna_hotwords.png ← 自动统计词频图
 outputs/老张-dna.json                ← 另一作者DNA参考
 outputs/ai_score.json                ← AI味检测测试结果
 outputs/debug/single_docx_chain_check.md ← 单篇链路调试记录
@@ -140,7 +140,7 @@ docs/writing-dna-*.md               ← 项目设计文档
 
 ### 目标
 
-用同一份 DNA（`guanhang_dna_profile.md`）和同一份 AI 草稿（`inputs/ai_drafts/new_ai_draft.docx`），让不同大模型分别执行改写，横向对比各模型对"写作 DNA 改写"任务的执行质量。
+用同一份 DNA（`user_dna_profile.md`）和同一份 AI 草稿（`inputs/ai_drafts/new_ai_draft.docx`），让不同大模型分别执行改写，横向对比各模型对"写作 DNA 改写"任务的执行质量。
 
 ### 待测模型矩阵
 
@@ -155,7 +155,7 @@ docs/writing-dna-*.md               ← 项目设计文档
 
 ### 统一输入
 
-- **DNA**：`outputs/dna_profiles/guanhang_dna_profile.md` 中的 8 条改写规则
+- **DNA**：`outputs/dna_profiles/user_dna_profile.md` 中的 8 条改写规则
 - **改写对象**：`outputs/rewrite_runs/new_ai_draft_effective_input.md`（纯净正文输入稿）
 - **提示词**：统一 prompt，包含完整的 DNA 规则 + 改写边界约束
 
