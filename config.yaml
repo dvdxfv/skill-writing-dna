@@ -1,0 +1,33 @@
+# Writing DNA 配置文件
+# 复制此文件为 config.local.yaml 后修改，config.local.yaml 优先级高于此文件
+
+# 用户信息
+user_name: "用户"
+
+# DNA提取参数
+dna:
+  min_samples: 5              # 最少样本数（低于此值会警告）
+  signature_min_docs: 2       # 签名短语最少出现在几篇文档中
+  top_signatures: 15          # 保留前N个签名短语
+  sentence_short_threshold: 15  # 短句判定阈值（字符数）
+
+# 改写参数
+rewrite:
+  max_length_ratio: 1.2       # 改写后字数上限/原文比例
+  signatures_per_200chars: 1  # 每200字植入签名短语数
+  max_sentence_length: 50     # 允许的最大句长
+
+# AI套话检测
+slop_detection:
+  enabled: true               # 是否启用AI套话检测
+
+# 输出路径
+paths:
+  raw_docx: inputs/raw_docx_articles
+  normalized: inputs/normalized_markdown
+  filtered: inputs/filtered_markdown
+  template_stripped: inputs/template_stripped_markdown
+  ai_drafts: inputs/ai_drafts
+  dna_profiles: outputs/dna_profiles
+  rewrite_runs: outputs/rewrite_runs
+  debug: outputs/debug

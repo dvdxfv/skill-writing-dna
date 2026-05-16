@@ -1,0 +1,5 @@
+mammoth>=1.6.0
+markdownify>=0.3.0
+matplotlib>=3.7.0
+Pillow>=10.0.0
+PyYAML>=6.0

@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# 虚拟环境
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 历史存档（不需要提交）
+archive/
+
+# 用户个人数据（inputs/ 全部不提交，用户自行放入）
+inputs/raw_docx_articles/*
+inputs/normalized_markdown/*
+inputs/filtered_markdown/*
+inputs/template_stripped_markdown/*
+inputs/ai_drafts/*
+
+# 用户产出（DNA画像、改写结果等）
+outputs/dna_profiles/*
+outputs/rewrite_runs/*
+outputs/debug/*
+outputs/*.json
+
+# 保留目录结构和README
+!inputs/raw_docx_articles/.gitkeep
+!inputs/normalized_markdown/.gitkeep
+!inputs/filtered_markdown/.gitkeep
+!inputs/template_stripped_markdown/.gitkeep
+!inputs/ai_drafts/.gitkeep
+!outputs/dna_profiles/.gitkeep
+!outputs/rewrite_runs/.gitkeep
+!outputs/debug/.gitkeep
+!outputs/README.md
+
+# 配置文件（用户本地）
+config.local.yaml
+
+# 临时文件
+*.tmp
+*.log
