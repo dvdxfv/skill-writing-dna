@@ -47,7 +47,7 @@ raw_docx_articles (5 DOCX)
 | `outputs/dna_profiles/guanhang_dna_profile.json` | DNA 结构化版本（可程序读取） |
 | `outputs/dna_profiles/guanhang_dna_feature_cloud.png` | "DNA 特征云"可视化 |
 
-> `outputs/dna_profiles/管航-single-dna.json` 为早期单篇词频版，`guanhang_auto_dna.json` 为自动统计版，均保留作历史参考，正式 DNA 以 `guanhang_dna_profile.md` 为准。
+> `outputs/dna_profiles/某人-single-dna.json` 为早期单篇词频版，`guanhang_auto_dna.json` 为自动统计版，均保留作历史参考，正式 DNA 以 `guanhang_dna_profile.md` 为准。
 
 ## 改写验证产物
 
@@ -106,8 +106,8 @@ outputs/rewrite_runs/new_ai_draft_extracted.md  ← AI草稿原始提取稿
 
 ### 参考留存（历史版本/外部样本）
 ```
-outputs/dna_profiles/管航-single-dna.json       ← 早期单篇提取版
-outputs/dna_profiles/管航-single-dna_hotwords.png  ← 早期词频图
+outputs/dna_profiles/某人-single-dna.json       ← 早期单篇提取版
+outputs/dna_profiles/某人-single-dna_hotwords.png  ← 早期词频图
 outputs/dna_profiles/guanhang_auto_dna.json      ← 自动统计版
 outputs/dna_profiles/guanhang_auto_dna_hotwords.png ← 自动统计词频图
 outputs/老张-dna.json                ← 另一作者DNA参考
@@ -166,7 +166,7 @@ docs/writing-dna-*.md               ← 项目设计文档
 | DNA 规则遵循度 | 人工逐条核验 8 条规则是否被落实 |
 | AI 味残留 | `scripts/detect_ai_slop.py` 打分 |
 | 信息完整性 | 原文关键事实（金额/人数/机构/政策）保留率 |
-| 风格相似度 | 与管航原笔 5 篇的句长/连接词/制度词分布对比 |
+| 风格相似度 | 与用户原笔 5 篇的句长/连接词/制度词分布对比 |
 | 可读性 | 人工盲评 |
 
 ### 预期产出
