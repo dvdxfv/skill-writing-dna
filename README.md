@@ -20,26 +20,25 @@
 
 ---
 
-### 流程图（⏸️ = 需要你操作）
+### 完整流程图
 
 ```mermaid
-flowchart LR
-    A["📁 1.放入样本"] --> B["🔧 2.自动预处理"]
-    B --> C["🧬 3.提取DNA"]
-    C --> D["⏸️ 4.你看DNA<br/>❌不准就诊断 → 回到3"]
-    D -->|✅ 准| E["📁 5.放入AI草稿"]
-    E --> F["✏️ 6.自动改写"]
-    F --> G["⏸️ 7.你看结果<br/>❌不好就换模型 → 回到6"]
-    G -->|✅ 好| H["🏆 8.交付"]
+flowchart TD
+    A["📁 1.放入样本"] --> B["🔧 2.自动预处理<br/>DOCX转换→过滤→模板剥离"]
+    B --> C["🧬 3.提取DNA<br/>自动统计+人工复核"]
+    C --> D{"🔵 4.DNA准确吗？"}
+    D -->|❌ 不准| E["🔍 诊断样本<br/>留一法+饱和度曲线"]
+    E --> C
+    D -->|✅ 准确| F["📁 5.放入AI草稿"]
+    F --> G["✏️ 6.按DNA改写<br/>黑名单清除+连接词替换+签名植入"]
+    G --> H{"🔵 7.效果满意吗？"}
+    H -->|❌ 不满意| I["🔄 换模型/调参数/查样本"]
+    I --> G
+    H -->|✅ 满意| J["🏆 8.交付成果"]
 
-    style D fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
-    style G fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
-    style C fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px
-    style F fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px
+    style D fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,color:#0d47a1
+    style H fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,color:#0d47a1
 ```
-
-> 🟦 蓝色框 = **你必须停下来看的节点**（可以跳过，但建议看一下）
-> 🟣 紫色框 = **核心处理步骤**（全自动）
 
 ---
 
