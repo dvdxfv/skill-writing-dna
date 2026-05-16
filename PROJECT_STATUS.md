@@ -71,10 +71,10 @@ raw_docx_articles (5 DOCX)
 | `scripts/render_dna_feature_cloud.py` | ✅ 已实现（本项目中新增） |
 | `scripts/detect_ai_slop.py` | ✅ 已实现 |
 | `scripts/ai_slop_dict.py` | ✅ 已实现 |
-| `scripts/extract_dna.py` | ⚪ 占位骨架 |
-| `scripts/extract_template_profile.py` | ⚪ 占位骨架 |
-| `scripts/rewrite_with_dna.py` | ⚪ 占位骨架 |
-| `scripts/generate_report.py` | ⚪ 占位骨架 |
+| `scripts/extract_dna.py` | ✅ 已实现（自动统计版，人工复核后产出正式画像） |
+| `scripts/extract_template_profile.py` | ✅ 已实现（模板画像提取，输出模板vs个人风格分界报告） |
+| `scripts/rewrite_with_dna.py` | ✅ 已实现（黑名单清除+AI连接词替换+签名短语植入） |
+| `scripts/generate_report.py` | ✅ 已实现（指标表+改动明细+原文对照报告） |
 
 ## 项目文件分类速查
 
@@ -131,8 +131,7 @@ docs/writing-dna-*.md               ← 项目设计文档
 
 ## 当前明确未完
 
-- `extract_dna.py` / `rewrite_with_dna.py` / `extract_template_profile.py` / `generate_report.py` 仍为占位骨架，对应环节由人工完成
-- `outputs/template_profiles/` 与 `outputs/reports/` 未产出内容（模板剥离已在 strip_template.py 完成，但未生成独立模板画像文件）
+- `outputs/template_profiles/` 与 `outputs/reports/` 未产出内容（模板画像已在 debug/ 下产出，正式路径待用户确认）
 - 未做多作者交叉验证
 - 留一法稳定性测试已完成（脚本见 `scripts/test_sample_sufficiency.py`，报告见 `outputs/debug/sample_sufficiency_test.md`）
 - **跨模型 benchmark 未执行** — 设计方案如下

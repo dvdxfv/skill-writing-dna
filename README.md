@@ -156,6 +156,9 @@ python scripts/strip_template.py --input inputs/filtered_markdown/*.md --output-
 # 样本充足性诊断（可选，建议5篇以上运行）
 python scripts/test_sample_sufficiency.py
 
+# 模板画像提取（可选，查看模板vs个人风格分界线）
+python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/debug/template_profile.json --output-md outputs/debug/template_profile.md
+
 # DNA提取
 python scripts/extract_dna.py --input inputs/template_stripped_markdown/*.md --user-name 你的名字 --output outputs/dna_profiles/你的名字-dna.json
 

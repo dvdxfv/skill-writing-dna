@@ -169,12 +169,12 @@ python3 scripts/generate_report.py --original <orig> --rewritten <new> --dna <dn
 - `scripts/docx_to_md.py`：DOCX→Markdown 转换
 - `scripts/filter_non_prose.py`：非正文过滤（表格/图片/附件）
 - `scripts/strip_template.py`：模板剥离（评分段/套话/指标说明）
-- `scripts/extract_dna.py`：DNA 提取（占位骨架，DNA提取由人工分析+复核完成）
-- `scripts/extract_template_profile.py`：模板画像提取（占位骨架）
+- `scripts/extract_dna.py`：DNA 提取（自动统计+人工复核）
+- `scripts/extract_template_profile.py`：模板画像提取（输出模板 vs 个人风格分界报告）
 - `scripts/detect_ai_slop.py`：AI 味检测
 - `scripts/ai_slop_dict.py`：AI 套话词典
-- `scripts/rewrite_with_dna.py`：DNA 改写（占位骨架，改写由人工完成）
-- `scripts/generate_report.py`：对比报告生成器（占位骨架）
+- `scripts/rewrite_with_dna.py`：DNA 改写（黑名单清除+AI连接词替换+签名植入）
+- `scripts/generate_report.py`：对比报告生成器（指标表+改动明细+原文对照）
 - `scripts/render_dna_feature_cloud.py`：DNA 特征云可视化
 - `docs/writing-dna-architecture.md`：系统架构说明
 - `docs/writing-dna-module-map.md`：模块职责说明
