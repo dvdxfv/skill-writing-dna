@@ -1,9 +1,9 @@
----
-name: writing-dna
-description: 个人写作风格指纹提取与复用工具。当用户希望让 AI 生成的内容"听起来像自己写的"、去除文章中明显的 AI 套话（赋能/重塑/生态/综上所述等）、把 AI 草稿改写成符合个人风格的成稿、或为自己建立一份可复用的"写作风格档案"时使用此 skill。触发场景包括：用户提到"AI 味太重"、"不像我写的"、"想要个人风格"、"去 AI 味"、"改写成我的风格"、"建立写作风格库"、"风格指纹"、"语气标尺"，或上传过往作品要求分析风格、要求将某段文字改写得更像自己/某个具体作者风格，均应触发此 skill。也适用于公众号、小红书、知乎、博客、邮件等任何需要"保留个人声音"的中文写作场景。
----
-
 # Writing DNA · 个人写作风格守护者
+
+> 触发场景：当用户上传过往作品并提到"风格""指纹""写作习惯""去AI味""不像我写的"，或要求将某段文字改写成特定个人风格时，启用此指令集。
+> 适用主题：公众号、小红书、知乎、博客、报告、邮件等任何需要保留个人声音的中文写作。
+
+---
 
 ## 这个 skill 解决什么
 
@@ -16,9 +16,9 @@ AI 写得快，但写得不像你。无论 ChatGPT、Claude 还是其他工具�
 
 ## 何时使用
 
-**主动触发**：用户上传了多篇过往文章并提到"风格"、"指纹"、"我的写作习惯"等词时，启动 `/dna-extract` 流程。
+**主动触发**：用户上传了多篇过往文章并提到"风格"、"指纹"、"我的写作习惯"等词时，启动 DNA 提取流程。
 
-**主动触发**：用户给出一段 AI 生成的文字 + 一份已存在的 DNA 文件（或要求"用我的风格改写"），启动 `/dna-rewrite` 流程。
+**主动触发**：用户给出一段 AI 生成的文字 + 一份已存在的 DNA 文件（或要求"用我的风格改写"），启动 DNA 改写流程。
 
 **不要触发**：用户只是要求"改得通顺一点"、"翻译"、"摘要"——这些与个人风格无关。
 
@@ -53,7 +53,7 @@ python scripts/test_sample_sufficiency.py
 - **饱和度曲线已平** → 再加任何篇数都不会提升效果，无需追加
 
 文件可以是：
-- `.docx` 文件（本 skill 内置 DOCX→Markdown 转换链路）
+- `.docx` 文件（内置 DOCX→Markdown 转换链路）
 - `.md` / `.txt` 文件
 - 直接粘贴的多段文字（用 `---` 或明显分隔符分开）
 - 文件夹路径（自动扫描该目录下所有 `.docx` / `.md` / `.txt` 文件）
@@ -67,7 +67,7 @@ python scripts/test_sample_sufficiency.py
 **Step 2：调用提取脚本**
 
 ```bash
-python3 scripts/extract_dna.py --input <文件夹或文件列表> --user-name <用户名> --output <用户名>-dna.json
+python scripts/extract_dna.py --input <文件夹或文件列表> --user-name <用户名> --output <用户名>-dna.json
 ```
 
 脚本会输出一份 JSON。**关键字段**及含义见 `references/dna_schema.md`，简版如下：
@@ -135,7 +135,7 @@ python3 scripts/extract_dna.py --input <文件夹或文件列表> --user-name <�
 
 调用：
 ```bash
-python3 scripts/detect_ai_slop.py --text <input> --dna <dna.json> --output ai_score.json
+python scripts/detect_ai_slop.py --text <input> --dna <dna.json> --output ai_score.json
 ```
 
 输出：AI 味分数（0-100，越高越 AI）+ 套话清单（每条标出原文位置）。
@@ -166,7 +166,7 @@ python3 scripts/detect_ai_slop.py --text <input> --dna <dna.json> --output ai_sc
 
 调用：
 ```bash
-python3 scripts/generate_report.py --original <orig> --rewritten <new> --dna <dna.json> --output report.md
+python scripts/generate_report.py --original <orig> --rewritten <new> --dna <dna.json> --output report.md
 ```
 
 报告包含：
@@ -221,7 +221,7 @@ python3 scripts/generate_report.py --original <orig> --rewritten <new> --dna <dn
 
 ## 能力边界（必须诚实告知）
 
-这个 skill **不是万能改写工具**。以下情况无法处理或效果有限，遇到时必须主动告知用户：
+这个工具 **不是万能改写工具**。以下情况无法处理或效果有限，遇到时必须主动告知用户：
 
 ### 不能做的事
 
@@ -252,20 +252,15 @@ python3 scripts/generate_report.py --original <orig> --rewritten <new> --dna <dn
 
 风格提取永远不是 100% 准确的。**5-12 篇样本只能捕捉到风格的骨架，捕捉不到全部血肉**。所以：
 
-- 改写后**始终建议用户人工通读一遍**——这不是 skill 失败，是任何文字工作的必要环节
+- 改写后**始终建议用户人工通读一遍**——这不是工具失败，是任何文字工作的必要环节
 - 当用户反馈"还是不太像我"时，**不要狡辩**。让用户指出具体哪一句不对，把它加入 DNA 文件的修正记录，下次就会改进
 - 当遇到 DNA 里没明确规定的情况（比如用户从来没写过某类主题），**老实说"这个领域你的样本里没覆盖，我按通用偏好猜的，请你校对"**
 - **样本越多不一定越好**——如果追加的文档是同一类型、同一模板，不仅不会提升准确性，反而会让领域噪声冒充个人风格。理想配置是 8-12 篇、覆盖 3-4 种不同项目类型
 
-## 文件清单
+---
 
-- `SKILL.md`：本文件（Trae 原生格式，含自动触发描述）
-- `WRITING_DNA.md`：通用指令文件（去 YAML 头，供 Cursor / Claude Code / VS Code / CodeX 使用）
-- `.cursor/rules/writing-dna.md`：Cursor 自动加载的规则文件
-- `.claude/writing-dna.md`：Claude Code 可引用的指令文件
-- `.github/copilot-instructions.md`：VS Code Copilot 自动读取
-- `.codex/rules/writing-dna.md`：CodeX 规则文件
-- `PROJECT_STATUS.md`：项目进度与文件分类速查
+## 脚本清单
+
 - `scripts/docx_to_md.py`：DOCX→Markdown 转换
 - `scripts/filter_non_prose.py`：非正文过滤（表格/图片/附件）
 - `scripts/strip_template.py`：模板剥离（评分段/套话/指标说明）
@@ -277,7 +272,4 @@ python3 scripts/generate_report.py --original <orig> --rewritten <new> --dna <dn
 - `scripts/generate_report.py`：对比报告生成器（指标表+改动明细+原文对照）
 - `scripts/md_to_docx.py`：Markdown 转 DOCX（WPS/Word 可打开的中文友好文档）
 - `scripts/render_dna_feature_cloud.py`：DNA 特征云可视化
-- `docs/writing-dna-architecture.md`：系统架构说明
-- `docs/writing-dna-module-map.md`：模块职责说明
-- `docs/writing-dna-prd.md`：产品需求文档
-- `examples/`：外部 AI 味测试样本
+- `scripts/test_sample_sufficiency.py`：样本充足性诊断（留一法+饱和度曲线）

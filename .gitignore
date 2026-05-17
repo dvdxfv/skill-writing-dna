@@ -14,6 +14,7 @@ env/
 # IDE
 .vscode/
 .idea/
+.obsidian/
 *.swp
 *.swo
 
@@ -35,7 +36,11 @@ inputs/ai_drafts/*
 outputs/dna_profiles/*
 outputs/rewrite_runs/*
 outputs/debug/*
+outputs/model_benchmarks/*
+outputs/reports/*
 outputs/*.json
+outputs/*.png
+outputs/*_cmp_*.png
 
 # 保留目录结构和README
 !inputs/raw_docx_articles/.gitkeep
@@ -50,7 +55,19 @@ outputs/*.json
 
 # 配置文件（用户本地）
 config.local.yaml
+.claude/settings.local.json
 
 # 临时文件
 *.tmp
 *.log
+
+# 文档图片（含敏感信息的示例图不提交）
+docs/images/*example*
+docs/images/*测评*
+docs/images/*某人*
+
+# 开发者内部文件（不提交）
+PROJECT_STATUS.md
+outputs/比赛交付物_图文帖子.md
+scripts/comparison_to_png.py
+scripts/slop_report_to_png.py
