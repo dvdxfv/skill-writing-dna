@@ -1,5 +1,7 @@
 # Writing DNA · 个人写作风格守护者
 
+[English](README_EN.md) | 中文
+
 让 AI 生成的内容"听起来像你写的"。
 
 > 🔌 **在哪能用**：Trae / Cursor / Claude Code / VS Code (Copilot) / CodeX，五个平台均已适配。克隆后 `pip install -r requirements.txt`，Python 3.10+ 即可。
