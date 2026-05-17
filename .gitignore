@@ -68,6 +68,7 @@ docs/images/*某人*
 
 # 开发者内部文件（不提交）
 PROJECT_STATUS.md
+docs/writing-dna-prd.md
 outputs/比赛交付物_图文帖子.md
 scripts/comparison_to_png.py
 scripts/slop_report_to_png.py

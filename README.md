@@ -66,7 +66,7 @@ python scripts/test_sample_sufficiency.py
 测试会直接告诉你：是样本不够（补文档）、还是样本类型太单一（加不同类型的）、还是够了但提取规则要调。
 
 <!-- 图2：DNA 热词云图 -->
-![DNA热词云图](./docs/images/某人dna_hotwords.png.png)
+![DNA热词云图](./docs/images/user_dna_hotwords_example.png)
 *图2 · DNA 热词云图：字越大用词越高频，一眼看出你的标志性表达*
 
 ---
@@ -571,7 +571,7 @@ python scripts/generate_report.py --original inputs/ai_drafts/你的草稿.md --
 | 图号 | 图片文件 | 所在章节 |
 |:---:|:---|:---|
 | 图1 | `ai_slop_report.png` | 流程图下方 · AI 味体检结果 |
-| 图2 | `某人dna_hotwords.png.png` | 第4步 DNA 确认后 · 热词云图 |
+| 图2 | `user_dna_hotwords_example.png` | 第4步 DNA 确认后 · 热词云图 |
 | 图3 | `comparison_report.png` | 第7步 效果确认后 · 改写前后对比 |
 | 图4 | `md_raw_wps_garbled.png` + `wps_docx_effect.png` | 第8步 交付 · MD 乱码 vs DOCX 排版 |
 
