@@ -1,6 +1,6 @@
 # Writing DNA · 个人写作风格守护者
 
-[English](README_EN.md) | 中文
+[English](https://github.com/dvdxfv/skill-writing-dna/blob/main/README_EN.md) | 中文
 
 让 AI 生成的内容"听起来像你写的"。
 

@@ -1,6 +1,6 @@
 # Writing DNA · Your Personal Writing Style Guardian
 
-[中文](README.md) | English
+[中文](https://github.com/dvdxfv/skill-writing-dna) | English
 
 Make AI-generated content sound like **you** wrote it.
 
