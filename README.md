@@ -454,8 +454,41 @@ DOCX 由 `scripts/md_to_docx.py` 生成（依赖 pandoc），自动配置黑体�
 ## 快速上手
 
 > **支持的 AI 编程工具：** Trae / Cursor / Claude Code / VS Code Copilot / CodeX — 项目的 `WRITING_DNA.md` 已同步到各平台的规则目录（`.cursor/rules/`、`.claude/`、`.github/`、`.codex/rules/`），Python 脚本通用。打开项目即生效。
+>
+> **两种使用方式：** 推荐在 Trae / Cursor 等工具中**对话式使用**（直接说话，AI 自动执行脚本）；也可以**命令行使用**（手动跑 Python 脚本）。
 
-### 第一步：安装
+### 方式一：对话式使用（推荐）
+
+在 Trae / Cursor / Claude Code 等工具中打开项目文件夹，直接说话即可：
+
+**提取 DNA：**
+```
+帮我把 inputs/raw_docx_articles/ 里的文章提取写作 DNA，用户名叫「你的名字」
+```
+AI 自动完成预处理 + DNA 提取，然后在对话中展示确认清单——你只需要回复"准，继续"或指出需要修正的项。
+
+**改写 AI 草稿：**
+```
+用我的 DNA 改写 inputs/ai_drafts/我的草稿.md，去掉 AI 味
+```
+AI 自动执行 AI 味体检 → 逐段改写 → 生成对比报告，然后等你确认效果。
+
+**加参数：**
+```
+用我的 DNA 改写，保守一点，不要改太猛
+用我的 DNA 改写，目标是小红书发布
+用我的 DNA 改写，换个模型，用 Claude
+帮我跑一下样本充足性测试
+帮我把改写稿转成 DOCX
+```
+
+**核心理念：** 全程在对话中完成，中间有两个必须你亲自确认的停等点（DNA 准不准？改写效果好不好？），其余自动执行。
+
+---
+
+### 方式二：命令行使用
+
+#### 第一步：安装
 
 ```bash
 # 克隆项目
@@ -468,11 +501,11 @@ pip install -r requirements.txt
 
 > **依赖说明**：`mammoth` 用于 DOCX→Markdown 转换，`markdownify` 用于 HTML→Markdown，`matplotlib` + `Pillow` 用于生成 DNA 特征云图，`PyYAML` 读取配置文件。
 
-### 第二步：放入样本
+#### 第二步：放入样本
 
 将你的 **5-8 篇过往作品**放入 `inputs/raw_docx_articles/`，支持 `.docx` / `.md` / `.txt`。
 
-### 第三步：一键运行
+#### 第三步：一键运行
 
 ```bash
 # 查看当前状态和下一步建议
@@ -488,7 +521,7 @@ python run.py extract --user-name 你的名字
 python run.py rewrite
 ```
 
-### 第四步：查看产出
+#### 第四步：查看产出
 
 | 产出 | 路径 |
 |:---|:---|
