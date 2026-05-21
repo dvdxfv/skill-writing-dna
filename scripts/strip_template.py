@@ -17,6 +17,7 @@ This module strips:
 
 import argparse
 import re
+import sys
 from pathlib import Path
 
 # ── Section headings that trigger "strip entire section until next heading" ──
@@ -224,6 +225,8 @@ def dedupe_long_paragraphs(text: str) -> str:
 
 
 def strip_template(text: str) -> str:
+    if not isinstance(text, str):
+        return ""
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     lines = text.split("\n")
 
@@ -239,10 +242,7 @@ def strip_template(text: str) -> str:
     i = 0
     result1: list[str] = []
     in_strip_zone = False
-    strip_depth = 0
     in_keep_zone = False
-    keep_depth = 0
-    skipping_heading_line = False
 
     while i < len(lines):
         line = lines[i]
@@ -252,26 +252,22 @@ def strip_template(text: str) -> str:
                 if in_strip_zone:
                     in_strip_zone = False
                 in_keep_zone = True
-                keep_depth = 1
                 result1.append(line)
                 i += 1
                 continue
             elif is_strip_section_heading(line):
                 in_strip_zone = True
-                strip_depth = 1
                 in_keep_zone = False
                 i += 1
                 continue
             elif is_strip_sub_heading(line) and not in_keep_zone:
-                skipping_heading_line = True
+                # Strip the sub-heading AND all content until the next heading
                 i += 1
-                while i < len(lines) and lines[i].strip() == "":
+                while i < len(lines) and not is_heading(lines[i]):
                     i += 1
                 continue
 
         if in_strip_zone:
-            if is_heading(line):
-                strip_depth += 1
             i += 1
             continue
 
@@ -280,13 +276,14 @@ def strip_template(text: str) -> str:
                 if is_strip_section_heading(line):
                     in_keep_zone = False
                     in_strip_zone = True
-                    strip_depth = 1
                     i += 1
                     continue
                 elif is_strip_sub_heading(line):
-                    skipping_heading_line = True
+                    # Strip the sub-heading AND all content until the next heading.
+                    # These sub-headings (绩效评价依据, 项目立项依据, etc.) always
+                    # contain regulatory boilerplate, even inside keep-zones.
                     i += 1
-                    while i < len(lines) and lines[i].strip() == "":
+                    while i < len(lines) and not is_heading(lines[i]):
                         i += 1
                     continue
                 elif is_keep_zone_heading(line):
@@ -375,15 +372,28 @@ def strip_template(text: str) -> str:
 
 def main():
     parser = argparse.ArgumentParser(description="Strip template content from filtered markdown.")
-    parser.add_argument("--input", nargs="+", required=True, help="Filtered markdown input files")
+    parser.add_argument("--input", nargs="+", required=True, help="Filtered markdown input files or directories")
     parser.add_argument("--output-dir", required=True, help="Directory for template-stripped markdown")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    input_files = []
     for raw_path in args.input:
         input_path = Path(raw_path)
+        if input_path.is_dir():
+            input_files.extend(sorted(input_path.glob("*.md")))
+        elif input_path.exists():
+            input_files.append(input_path)
+        else:
+            print(f"Error: path not found: {input_path}", file=sys.stderr)
+
+    if not input_files:
+        print("Error: no valid input files found", file=sys.stderr)
+        sys.exit(1)
+
+    for input_path in input_files:
         text = input_path.read_text(encoding="utf-8")
         stripped = strip_template(text)
         output_path = output_dir / input_path.name

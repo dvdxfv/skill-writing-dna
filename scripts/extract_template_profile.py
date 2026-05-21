@@ -22,6 +22,16 @@ from typing import Any
 SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
+
+def configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 from strip_template import (
     STRIP_SECTION_PATTERNS,
     STRIP_SUB_PATTERNS,
@@ -309,6 +319,7 @@ def build_markdown_report(profile: dict[str, Any]) -> str:
 
 
 def main():
+    configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Extract a template profile from filtered markdown files.")
     parser.add_argument("--input", nargs="+", required=True, help="Filtered markdown files")
     parser.add_argument("--output-json", required=True, help="Template profile JSON output path")

@@ -30,6 +30,16 @@ DEFAULT_INPUT = PROJECT_ROOT / "inputs" / "template_stripped_markdown"
 DEFAULT_JSON = PROJECT_ROOT / "outputs" / "debug" / "sample_sufficiency_test.json"
 DEFAULT_MD = PROJECT_ROOT / "outputs" / "debug" / "sample_sufficiency_test.md"
 
+
+def configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 # ── 文档标签（项目类型）──
 DOC_TAGS = {
     "（某人）2023-2024年山西美好蕴育生物科技有限责任公司绩效评价报告（定稿）.md": "入园企业",
@@ -278,6 +288,7 @@ def generate_conclusion(t1, t2, t3, doc_count):
 #  MAIN
 # ══════════════════════════════════════════════════
 def main():
+    configure_utf8_stdio()
     args = parse_args()
     input_dir = Path(args.input) if args.input else DEFAULT_INPUT
     output_json = Path(args.output_json) if args.output_json else DEFAULT_JSON

@@ -95,7 +95,7 @@ python scripts/test_sample_sufficiency.py
 
 ### ✅ 第8步：交付
 
-确认满意后，模型会自动交付两份成品：
+确认满意后，模型会自动交付 Markdown 成稿、对比报告和调试数据；如果你需要，还可以再转一份 DOCX：
 
 **默认你拿到的是 Markdown 版本**（`rewritten_draft.md`），适合直接在 Obsidian、Typora 等 Markdown 编辑器里使用。
 
@@ -108,7 +108,6 @@ python scripts/test_sample_sufficiency.py
 | `report.md` | 📊 改写前后对比报告，读一遍确认质量 |
 | `rewritten_draft.md` | 📝 改写后的成品 Markdown |
 | `rewritten_draft.docx` | 📄 WPS/Word 直接打开，排版好的版本（选转） |
-| `rewrite_notes.md` | 📋 改写过程说明 |
 | `rewrite_debug.json` | 🔧 详细指标数据（一般不用管） |
 
 <!-- 图4：MD 直接复制到 WPS 乱码 vs DOCX 转换后排版效果 -->
@@ -358,7 +357,7 @@ python scripts/test_sample_sufficiency.py
 **症状：** DNA 里混入大量套话/格式化内容，或者提取出的特征太少
 
 ```bash
-python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/debug/template_profile.json --output-md outputs/debug/template_profile.md
+python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/template_profiles/template_profile.json --output-md outputs/template_profiles/template_profile.md
 ```
 
 查看 `template_profile.md` 中的 **平均保留率**：
@@ -476,7 +475,7 @@ AI 自动执行 AI 味体检 → 逐段改写 → 生成对比报告，然后等
 **加参数：**
 ```
 用我的 DNA 改写，保守一点，不要改太猛
-用我的 DNA 改写，目标是小红书发布
+用我的 DNA 改写，发布场景是小红书
 用我的 DNA 改写，换个模型，用 Claude
 帮我跑一下样本充足性测试
 帮我把改写稿转成 DOCX
@@ -528,7 +527,9 @@ python run.py rewrite
 | DNA画像（JSON） | `outputs/dna_profiles/<你的名字>-dna.json` |
 | DNA热词图（PNG） | `outputs/dna_profiles/<你的名字>-dna_hotwords.png` |
 | 改写成品稿 | `outputs/rewrite_runs/rewritten_draft.md` |
+| 改写对比报告 | `outputs/rewrite_runs/report.md` |
 | 改写调试信息 | `outputs/rewrite_runs/rewrite_debug.json` |
+| DOCX交付版（可选） | `outputs/rewrite_runs/rewritten_draft.docx` |
 
 ### 高级用法：逐脚本调用
 
@@ -544,7 +545,7 @@ python scripts/strip_template.py --input inputs/filtered_markdown/*.md --output-
 python scripts/test_sample_sufficiency.py
 
 # 模板画像提取（可选，查看模板vs个人风格分界线）
-python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/debug/template_profile.json --output-md outputs/debug/template_profile.md
+python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/template_profiles/template_profile.json --output-md outputs/template_profiles/template_profile.md
 
 # DNA提取
 python scripts/extract_dna.py --input inputs/template_stripped_markdown/*.md --user-name 你的名字 --output outputs/dna_profiles/你的名字-dna.json

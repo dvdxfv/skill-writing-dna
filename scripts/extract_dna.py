@@ -19,6 +19,7 @@ from matplotlib import font_manager
 
 sys.path.insert(0, str(Path(__file__).parent))
 from ai_slop_dict import ALL_SLOP, detect_slop
+from strip_template import strip_template as _strip_template_prose
 
 
 EMOJI_RE = re.compile(
@@ -301,8 +302,22 @@ def render_hotwords_image(
 
 
 def extract_dna(docs: list[dict[str, str]], user_name: str) -> dict[str, Any]:
-    cleaned_docs = [clean_markdown(doc["content"]) for doc in docs]
+    # Strip template boilerplate before analysis so template-heavy docs
+    # (e.g. 绩效评价报告) don't pollute signature phrases and hot words.
+    # _strip_template_prose is a no-op on non-template documents.
+    stripped_docs = [
+        {"filename": d["filename"], "content": _strip_template_prose(d["content"])}
+        for d in docs
+    ]
+    cleaned_docs = [clean_markdown(doc["content"]) for doc in stripped_docs]
     all_text = "\n\n".join(cleaned_docs)
+
+    if not all_text.strip():
+        raise ValueError(
+            "All input documents were fully stripped to empty content. "
+            "Check that inputs contain personal prose, not only template boilerplate."
+        )
+
     all_sentences = split_sentences(all_text)
     all_paragraphs = split_paragraphs(all_text)
 
@@ -316,7 +331,7 @@ def extract_dna(docs: list[dict[str, str]], user_name: str) -> dict[str, Any]:
     avg_paragraph_lines = sum(paragraph_lines) / len(paragraph_lines) if paragraph_lines else 0
 
     emojis: list[str] = []
-    for doc in docs:
+    for doc in stripped_docs:
         emojis.extend(extract_emojis(doc["content"]))
     emoji_counter = Counter(emojis)
 
@@ -331,9 +346,9 @@ def extract_dna(docs: list[dict[str, str]], user_name: str) -> dict[str, Any]:
     else:
         emoji_frequency = "heavy"
 
-    min_signature_docs = 1 if len(docs) == 1 else 2
-    signatures = find_signature_phrases(docs, min_doc_appearances=min_signature_docs)
-    opener_closer = extract_openers_closers(docs)
+    min_signature_docs = 1 if len(stripped_docs) == 1 else 2
+    signatures = find_signature_phrases(stripped_docs, min_doc_appearances=min_signature_docs)
+    opener_closer = extract_openers_closers(stripped_docs)
 
     self_slop_hits: list[str] = []
     for text in cleaned_docs:

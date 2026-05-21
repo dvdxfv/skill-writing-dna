@@ -16,6 +16,16 @@ from typing import Any
 SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
+
+def configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 try:
     from ai_slop_dict import ALL_SLOP, detect_slop
 except ImportError:
@@ -206,6 +216,7 @@ def build_debug_info(
 
 
 def main():
+    configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Rewrite a draft with a DNA profile.")
     parser.add_argument("--draft", required=True, help="Input draft markdown or text file")
     parser.add_argument("--dna", required=True, help="DNA profile JSON path")

@@ -6,7 +6,17 @@ DNA profile, and debug artifacts.
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+
+def configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
 
 
 def load_text(path: str) -> str:
@@ -116,6 +126,7 @@ def build_report(original: str, rewritten: str, dna: dict, debug: dict) -> str:
 
 
 def main():
+    configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Generate a human-readable rewrite report.")
     parser.add_argument("--original", required=True, help="Original draft path")
     parser.add_argument("--rewritten", required=True, help="Rewritten draft path")

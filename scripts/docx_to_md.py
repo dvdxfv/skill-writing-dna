@@ -75,7 +75,7 @@ def default_output_path(input_path: Path) -> Path:
 
 def main():
     parser = argparse.ArgumentParser(description="Convert DOCX files to readable Markdown.")
-    parser.add_argument("--input", nargs="+", required=True, help="DOCX file paths")
+    parser.add_argument("--input", nargs="+", required=True, help="DOCX file paths or directories")
     parser.add_argument("--output-dir", help="Optional output directory for generated markdown files")
     parser.add_argument("--stdout", action="store_true", help="Print markdown to stdout for single-file usage")
     args = parser.parse_args()
@@ -84,11 +84,21 @@ def main():
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)
 
+    input_files = []
     for raw_path in args.input:
         input_path = Path(raw_path)
-        if not input_path.exists():
-            print(f"Error: file not found: {input_path}", file=sys.stderr)
-            continue
+        if input_path.is_dir():
+            input_files.extend(sorted(input_path.glob("*.docx")))
+        elif input_path.exists():
+            input_files.append(input_path)
+        else:
+            print(f"Error: path not found: {input_path}", file=sys.stderr)
+
+    if not input_files:
+        print("Error: no valid input files found", file=sys.stderr)
+        sys.exit(1)
+
+    for input_path in input_files:
         if input_path.suffix.lower() != ".docx":
             print(f"Error: only .docx is supported: {input_path}", file=sys.stderr)
             continue

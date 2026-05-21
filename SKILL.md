@@ -26,6 +26,16 @@ AI 写得快，但写得不像你。无论 ChatGPT、Claude 还是其他工具�
 
 ## 首次回复：智能判断+引导（禁止输出 CLI 命令）
 
+这个 skill 默认运行在工具对话框里。用户不应该被迫理解脚本链路、目录约定和参数细节；模型要先读懂用户已经给了什么，再决定下一步怎么做。
+
+核心原则：
+
+- 先看本轮对话里的附件、粘贴文本和关键词，再决定是提取 DNA 还是改写草稿
+- 能直接判断就直接进入对应流程，不把“你要提取还是改写”作为默认问题
+- 信息不足时只问一个必要问题
+- 执行过程中的脚本和路径由模型处理；只有排查、复现或用户主动要求时才展开命令
+- 必须在 DNA 确认和改写效果确认两个节点停下等用户判断
+
 触发后，先根据用户消息**自动判断意图**，不要每次都问"你要提取还是改写"。
 
 ### 意图判断规则
@@ -101,10 +111,18 @@ python scripts/test_sample_sufficiency.py
 
 逐篇读入（`.docx` 自动转 Markdown），去除 markdown 语法标记（保留纯文字）、去除代码块、保留段落结构。
 
-**Step 2：调用提取脚本**
+**Step 1.5：模板剥离（必须执行，不可跳过）**
+
+调用 DNA 提取脚本**之前**，必须先对全部输入文件运行模板剥离。跳过此步会导致绩效评价报告的评分段、指标说明、法规列表等模板噪声混入热词和签名短语，使提取结果完全失效。
 
 ```bash
-python3 scripts/extract_dna.py --input <文件夹或文件列表> --user-name <用户名> --output <用户名>-dna.json
+python3 scripts/strip_template.py --input <用户上传文件列表或文件夹> --output-dir inputs/template_stripped_markdown/
+```
+
+**Step 2：调用提取脚本（输入必须为 Step 1.5 模板剥离后的文件）**
+
+```bash
+python3 scripts/extract_dna.py --input inputs/template_stripped_markdown/ --user-name <用户名> --output <用户名>-dna.json
 ```
 
 脚本会输出一份 JSON。**关键字段**及含义见 `references/dna_schema.md`，简版如下：
@@ -116,16 +134,71 @@ python3 scripts/extract_dna.py --input <文件夹或文件列表> --user-name <�
 - `emoji_policy`：常用 emoji 白名单、从未用过的 emoji 黑名单
 - `tone_descriptors`：自动总结的语气特征（如"自嘲带刺"、"克制理性"、"温暖热情"）
 
+**Step 2.5：生成语义 DNA 画像 JSON + 词云图**
+
+`extract_dna.py` 输出的是统计型数据（n-gram 频率、句长等），用于后续改写参数。用户看到的词云图需要**语义型画像 JSON**——由你（AI）结合模板剥离后的原文和 Step 2 的统计数据，写出一份定性分析，存为 `<用户名>-formal-dna.json`。
+
+**JSON 结构（参照 `outputs/dna_profiles/user_dna_profile.json`）：**
+
+```json
+{
+  "author": "<用户名>",
+  "overall_assessment": "一句话概括写作风格定位",
+  "structure_habits": {
+    "within_section": "章节内组织方式，如先判断后展开、先总述后分",
+    "transition_mode": "过渡方式，如一是…二是…枚举式、较少使用弱过渡词"
+  },
+  "argumentation_style": {
+    "problem_analysis": "如何分析问题，如先定性再枚举，每条附事实",
+    "suggestion_delivery": "如何写建议，如建议+主体+动作+内容，建制式建议"
+  },
+  "language_features": {
+    "sentence_length": "句长特征，如长句为主，分号连接多信息单元",
+    "tone": "语气特征，如稳健规范，审慎判断，不武断"
+  },
+  "rewrite_rules": [
+    "先给判断句再展开",
+    "问题用一是二是三是，每条附事实支撑",
+    "建议用建议+主体+动作+内容句式",
+    "判断后接事实，不写没有数据的判断"
+  ]
+}
+```
+
+⚠️ **词云关键词映射**（JSON 中的文字必须包含这些词，词云脚本才能识别）：
+
+| JSON 文字包含 | 词云显示 |
+|:---|:---|
+| `一是`/`二是`/`枚举` | 一是…二是…三是… |
+| `先判断后展开`/`先给判断句`/`先定性`/`概括后举证` | 先判断后展开 |
+| `制度`/`机制`/`流程`/`权责` | 制度 / 机制 / 流程 / 权责 |
+| `建议+主体+动作+内容` | 建议+主体+动作+内容 |
+| `事实支撑`/`附事实`/`数据支撑` | 判断后接事实 |
+| `长句`/`分号`/`信息单元` | 长句高信息密度 |
+| `总分`/`先总述` | 段内总分推进 |
+| `稳健`/`规范`/`审慎` | 稳健规范语气 |
+| `流程链`/`协同机制` | 协同机制 / 流程链 |
+| `手段/方式`/`实现/确保/达到` | 手段→动作→目的 |
+
+如果用户写作不是政务公文类，只填写适用的字段即可，词云自动跳过未匹配项。
+
+生成 JSON 后立即调用：
+
+```bash
+python3 scripts/render_dna_feature_cloud.py --input <用户名>-formal-dna.json --output <用户名>-dna_feature_cloud.png
+```
+
 **Step 3：⏸️ 必须停下，等用户确认 DNA 准不准**
 
 **这一步绝对不能跳过，也绝对不能替用户做判断。**
 
 提取完 DNA 后，你必须：
 1. 把提取结果以**人类可读的简版**展示给用户（不是直接甩 JSON），格式参照 `references/dna_summary_template.md`
-2. **用图片语法直接在对话中展示热词图**——这是签名短语的直观可视化，用户一眼就能看出"这些词是不是我的"
-   - 使用 markdown 图片语法：`![你的写作DNA热词图](<用户名>-dna_hotwords.png)`
-   - **同时用文字告诉用户完整路径**："热词图已保存到 `<完整路径>`，你可以直接打开查看"
+2. **用图片语法直接在对话中展示 DNA 特征云图**——这是写作风格的直观可视化，用户一眼就能看出"这些描述像不像我"
+   - 使用 markdown 图片语法：`![写作DNA特征云](<用户名>-dna_feature_cloud.png)`
+   - **同时用文字告诉用户完整路径**："特征云图已保存到 `<完整路径>`，你可以直接打开查看"
    - 如果图片无法在对话中渲染，必须明确提示用户去哪个目录找这个 PNG 文件
+   - 补充说明："脚本同时生成了 `<用户名>-dna_hotwords.png` 签名短语频率条形图，可作为辅助参考"
 3. **明确告诉用户：现在需要你人工检查以下 5 项**
 4. **停下来等待用户回复后才能继续**
 
@@ -133,8 +206,8 @@ python3 scripts/extract_dna.py --input <文件夹或文件列表> --user-name <�
 
 | # | 检查项 | 怎么看 | 看哪里 |
 |:---:|:---|:---|:---|
-| 1 | **热词图一眼像不像？** | 图中显示的签名短语是不是你确实常用的？有没有"我从来没说过这个"的？ | 🔥 **热词图 PNG**（最重要，最先看） |
-| 2 | **签名短语列表对不对？** | 这 15 个短语和热词图一致吗？有没有想增减的？ | `signature_phrases` 列表 |
+| 1 | **特征云一眼像不像？** | 云图里的风格描述是不是准确反映了你的写作习惯？有没有"我根本不这样写"的？ | 🔥 **特征云 PNG**（最重要，最先看） |
+| 2 | **签名短语列表对不对？** | 这 15 个短语和特征云一致吗？有没有想增减的？ | `signature_phrases` 列表 |
 | 3 | **句长对不对？** | 平均句长和短句比例是否符合你的实际习惯？ | `sentence_features` |
 | 4 | **黑名单词准不准？** | 列出的"你从不用的套话"，你是不是真的不用？有没有误杀你自己常用的表达？ | `blacklist_phrases` |
 | 5 | **开头/结尾像不像？** | `openers` 和 `closers` 是不是你惯用的起手/收尾方式？ | `openers` / `closers` |
@@ -149,7 +222,7 @@ python3 scripts/extract_dna.py --input <文件夹或文件列表> --user-name <�
 | "整体都不太像" | **先别急着重提取**，让用户跑样本充足性测试：<br/>```bash<br/>python scripts/test_sample_sufficiency.py<br/>```<br/>根据测试结果决定是补样本还是换模型 |
 
 **核心原则：DNA 提取结果只有用户本人能确认是否准确。你不能替用户说"看起来没问题"。**
-**热词图是用户判断的第一依据——先看图，再看文字。**
+**特征云是用户判断的第一依据——先看图，再看文字。**
 
 **Step 4：保存 DNA 文件**
 
@@ -166,7 +239,7 @@ python3 scripts/extract_dna.py --input <文件夹或文件列表> --user-name <�
   - 本轮对话中上传的 `.docx` / `.md` / `.txt` 文件
   - 用户指定的文件路径（如 `inputs/ai_drafts/我的草稿.md`）
 - **必选**：一份 DNA 文件（默认在工作目录找 `*-dna.json`，找不到时告知用户先提取 DNA）
-- **可选**：目标平台（公众号 / 小红书 / 知乎 / 通用，影响段落长度和 emoji 浓度）
+- **可选**：发布场景（公众号 / 小红书 / 知乎 / 通用 / 正式报告，仅影响段落长度、emoji浓度和语气风格，**不涉及平台发布或自动分发**）
 - **可选**：保守度档位（轻度润色 / 标准改写 / 深度重写，默认标准）
 
 **关键是：用户说"用我的 DNA 改写"然后把文字贴过来、或拖了个文件进对话——你直接改就行，不要再问"文件路径是什么"。**
@@ -208,7 +281,7 @@ python3 scripts/detect_ai_slop.py --text <input> --dna <dna.json> --output ai_sc
 
 调用：
 ```bash
-python3 scripts/generate_report.py --original <orig> --rewritten <new> --dna <dna.json> --output report.md
+python3 scripts/generate_report.py --original <orig> --rewritten outputs/rewrite_runs/rewritten_draft.md --dna <dna.json> --debug-json outputs/rewrite_runs/rewrite_debug.json --output-md outputs/rewrite_runs/report.md
 ```
 
 报告包含：
@@ -223,9 +296,9 @@ python3 scripts/generate_report.py --original <orig> --rewritten <new> --dna <dn
 
 生成完对比报告后，你必须：
 1. 把 `report.md`（对比报告）的**关键结论**展示给用户——重点展示：AI味分数变化、套话清除了哪些、签名短语命中了哪些
-   - **同时告诉用户完整路径**："完整对比报告已保存到 `<report.md完整路径>`"
-2. **把改写后的全文（`rewritten.md`）展示给用户**——让用户通读
-   - **同时告诉用户完整路径**："改写后全文已保存到 `<rewritten.md完整路径>`"
+   - **同时告诉用户完整路径**："完整对比报告已保存到 `outputs/rewrite_runs/report.md`"
+2. **把改写后的全文（`rewritten_draft.md`）展示给用户**——让用户通读
+   - **同时告诉用户完整路径**："改写后全文已保存到 `outputs/rewrite_runs/rewritten_draft.md`"
 3. **明确告诉用户：现在需要你检查以下 4 项**
 4. **停下来等待用户回复后才能交付**
 
@@ -245,19 +318,19 @@ python3 scripts/generate_report.py --original <orig> --rewritten <new> --dna <dn
 | "满意，交付" | 进入 Step 5 输出最终文件 |
 | "这几段还不像" | 让用户指出具体段落 → 针对性重写那几段 |
 | "AI味没去干净" | 检查黑名单是否有遗漏 → 补充后重跑 |
-| "整体都不对" | **先别急着反复改写**，排查顺序：<br/>① DNA 准不准？（回看热词图+签名短语）<br/>② 样本够不够？（`python scripts/test_sample_sufficiency.py`）<br/>③ 换个模型试试 |
+| "整体都不对" | **先别急着反复改写**，排查顺序：<br/>① DNA 准不准？（回看特征云+签名短语）<br/>② 样本够不够？（`python scripts/test_sample_sufficiency.py`）<br/>③ 换个模型试试 |
 
 **核心原则：改写效果只有用户本人能确认。你不能说"改得不错了"——必须等用户自己说满意。**
 
 **Step 5：交付**
 
 - 输出四个文件到工作目录：
-  - `rewritten.md`（Markdown 最终稿）
-  - `rewritten.docx`（DOCX 最终稿，WPS/Word 可直接打开）
-  - `report.md`（对比报告）
-  - `debug.json`（详细指标）
-- 生成 DOCX 的命令：`python scripts/md_to_docx.py --input rewritten.md --output rewritten.docx`
-- 在对话里给用户**简短**总结（不要复述全部对比），重点是："改写完成，AI 味从 X 降到 Y，套话清了 N 个。完整对比见 report.md，DOCX 版可直接用 WPS 打开。"
+  - `outputs/rewrite_runs/rewritten_draft.md`（Markdown 最终稿）
+  - `outputs/rewrite_runs/report.md`（对比报告）
+  - `outputs/rewrite_runs/rewrite_debug.json`（详细指标）
+  - `outputs/rewrite_runs/rewritten_draft.docx`（可选 DOCX 最终稿，WPS/Word 可直接打开）
+- 用户确认满意且需要 DOCX 时，再生成 DOCX：`python3 scripts/md_to_docx.py --input outputs/rewrite_runs/rewritten_draft.md --output outputs/rewrite_runs/rewritten_draft.docx`
+- 在对话里给用户**简短**总结（不要复述全部对比），重点是："改写完成，AI 味从 X 降到 Y，套话清了 N 个。完整对比见 outputs/rewrite_runs/report.md。"
 
 ---
 
@@ -321,5 +394,4 @@ python3 scripts/generate_report.py --original <orig> --rewritten <new> --dna <dn
 - `scripts/render_dna_feature_cloud.py`：DNA 特征云可视化
 - `docs/writing-dna-architecture.md`：系统架构说明
 - `docs/writing-dna-module-map.md`：模块职责说明
-- `docs/writing-dna-prd.md`：产品需求文档
 - `examples/`：外部 AI 味测试样本

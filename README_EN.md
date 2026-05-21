@@ -95,7 +95,7 @@ After rewriting and generating the comparison report, the model **stops and wait
 
 ### ✅ Step 8: Delivery
 
-Once you confirm satisfaction, the model delivers two outputs:
+Once you confirm satisfaction, the model delivers the Markdown draft, comparison report, and debug data; if needed, it can also convert a DOCX version:
 
 **Default: Markdown version** (`rewritten_draft.md`), ready for Obsidian, Typora, or any Markdown editor.
 
@@ -108,7 +108,6 @@ All outputs in `outputs/rewrite_runs/`:
 | `report.md` | 📊 Before/after comparison report — read to verify quality |
 | `rewritten_draft.md` | 📝 Final rewritten Markdown |
 | `rewritten_draft.docx` | 📄 WPS/Word ready, formatted version (opt-in) |
-| `rewrite_notes.md` | 📋 Rewrite process notes |
 | `rewrite_debug.json` | 🔧 Detailed metrics (generally ignore) |
 
 <!-- Figure 4: MD garbled in WPS vs DOCX conversion -->
@@ -346,7 +345,7 @@ Report output to `outputs/debug/sample_sufficiency_test.md`. Check these two met
 **Symptom**: DNA mixed with lots of boilerplate/formatted content, or too few features extracted
 
 ```bash
-python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/debug/template_profile.json --output-md outputs/debug/template_profile.md
+python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/template_profiles/template_profile.json --output-md outputs/template_profiles/template_profile.md
 ```
 
 Check **average retention rate** in `template_profile.md`:
@@ -510,7 +509,9 @@ python run.py rewrite
 | DNA profile (JSON) | `outputs/dna_profiles/<YourName>-dna.json` |
 | DNA hotwords chart (PNG) | `outputs/dna_profiles/<YourName>-dna_hotwords.png` |
 | Rewritten final draft | `outputs/rewrite_runs/rewritten_draft.md` |
+| Rewrite comparison report | `outputs/rewrite_runs/report.md` |
 | Rewrite debug info | `outputs/rewrite_runs/rewrite_debug.json` |
+| DOCX delivery version (optional) | `outputs/rewrite_runs/rewritten_draft.docx` |
 
 ### Advanced: Per-Script Invocation
 
@@ -526,7 +527,7 @@ python scripts/strip_template.py --input inputs/filtered_markdown/*.md --output-
 python scripts/test_sample_sufficiency.py
 
 # Template profile extraction (optional, check template vs personal style boundary)
-python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/debug/template_profile.json --output-md outputs/debug/template_profile.md
+python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/template_profiles/template_profile.json --output-md outputs/template_profiles/template_profile.md
 
 # DNA extraction
 python scripts/extract_dna.py --input inputs/template_stripped_markdown/*.md --user-name YourName --output outputs/dna_profiles/YourName-dna.json
