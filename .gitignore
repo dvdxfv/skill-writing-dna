@@ -61,8 +61,10 @@ config.local.yaml
 *.tmp
 *.log
 
-# 文档图片（含敏感信息的示例图不提交）
+# 文档图片（含敏感信息的示例图不提交，已脱敏的公开图片除外）
 docs/images/*example*
+!docs/images/user_dna_hotwords_example.png
+!docs/images/model_benchmark_example.png
 docs/images/*测评*
 docs/images/*某人*
 
