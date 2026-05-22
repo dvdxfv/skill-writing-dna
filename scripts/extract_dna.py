@@ -22,6 +22,15 @@ from ai_slop_dict import ALL_SLOP, detect_slop
 from strip_template import strip_template as _strip_template_prose
 
 
+def configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 EMOJI_RE = re.compile(
     "["
     "\U0001F300-\U0001F5FF"
@@ -392,6 +401,7 @@ def extract_dna(docs: list[dict[str, str]], user_name: str) -> dict[str, Any]:
 
 
 def main():
+    configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Extract a reusable writing DNA profile from past writing samples.")
     parser.add_argument("--input", nargs="+", required=True, help="Input file or directory paths")
     parser.add_argument("--user-name", default="user", help="User name used in the output DNA file")

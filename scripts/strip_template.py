@@ -20,6 +20,16 @@ import re
 import sys
 from pathlib import Path
 
+
+def configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 # ── Section headings that trigger "strip entire section until next heading" ──
 STRIP_SECTION_PATTERNS = [
     re.compile(r"^(?:[一二三四五六七八九十\d]+[\.\、]?\s*)?绩效评价工作开展情况\s*$"),
@@ -371,6 +381,7 @@ def strip_template(text: str) -> str:
 
 
 def main():
+    configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Strip template content from filtered markdown.")
     parser.add_argument("--input", nargs="+", required=True, help="Filtered markdown input files or directories")
     parser.add_argument("--output-dir", required=True, help="Directory for template-stripped markdown")

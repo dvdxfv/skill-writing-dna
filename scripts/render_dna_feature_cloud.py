@@ -6,11 +6,21 @@ Render a human-facing DNA feature cloud from a formal writing DNA JSON profile.
 import argparse
 import json
 import random
+import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
+
+
+def configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
 
 
 CANVAS_WIDTH = 1600
@@ -235,6 +245,7 @@ def render_feature_cloud(profile: dict[str, Any], output_path: Path) -> list[tup
 
 
 def main() -> None:
+    configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Render a visual DNA feature cloud from a formal DNA JSON.")
     parser.add_argument("--input", required=True, help="Formal DNA JSON path")
     parser.add_argument("--output", help="Output PNG path; defaults to <input-stem>_feature_cloud.png")

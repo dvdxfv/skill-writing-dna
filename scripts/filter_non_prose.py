@@ -17,6 +17,16 @@ import re
 import sys
 from pathlib import Path
 
+
+def configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 TABLE_BORDER_RE = re.compile(r"^\s*\|.*\|\s*$")
 TABLE_SEPARATOR_RE = re.compile(r"^\s*\|?\s*[:\- ]+\|[:\-| ]*$")
 IMAGE_MD_RE = re.compile(r"!\[[^\]]*\]\([^)]+\)")
@@ -94,6 +104,7 @@ def filter_non_prose(text: str) -> str:
 
 
 def main():
+    configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Filter tables, images, and other non-prose content from markdown.")
     parser.add_argument("--input", nargs="+", required=True, help="Markdown input files or directories")
     parser.add_argument("--output-dir", required=True, help="Directory for filtered markdown output")

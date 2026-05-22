@@ -18,6 +18,15 @@ import tempfile
 from pathlib import Path
 
 
+def configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 def check_pandoc() -> None:
     if not shutil.which("pandoc"):
         print("错误：未找到 pandoc，请先安装 https://pandoc.org/installing.html", file=sys.stderr)
@@ -82,6 +91,7 @@ def default_output_path(input_path: Path) -> Path:
 
 
 def main():
+    configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Markdown 转 DOCX（中文友好）")
     parser.add_argument("--input", required=True, help="输入 Markdown 文件路径")
     parser.add_argument("--output", help="输出 DOCX 文件路径（默认与输入同名、改后缀为 .docx）")

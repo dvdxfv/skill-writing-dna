@@ -21,6 +21,15 @@ sys.path.insert(0, str(Path(__file__).parent))
 from ai_slop_dict import ALL_SLOP, detect_slop
 
 
+def configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 def render_hit_context(text: str, position: int, phrase: str, window: int = 15) -> str:
     """Return a compact context string with the hit highlighted."""
     start = max(0, position - window)
@@ -64,6 +73,7 @@ def extend_with_user_blacklist(text: str, result: dict, dna_path: str) -> dict:
 
 
 def main():
+    configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Detect AI-slop phrases and patterns in text.")
     parser.add_argument("--text-file", help="Path to a UTF-8 text/markdown file.")
     parser.add_argument("--text", help="Raw text input for quick tests.")

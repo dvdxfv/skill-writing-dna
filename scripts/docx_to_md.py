@@ -17,6 +17,15 @@ import mammoth
 from markdownify import markdownify as md
 
 
+def configure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 def _remove_toc_section(text: str) -> str:
     """删除自动目录区域（从'目 录'行开始到最后一个 TOC 链接行）。"""
     lines = text.split("\n")
@@ -74,6 +83,7 @@ def default_output_path(input_path: Path) -> Path:
 
 
 def main():
+    configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Convert DOCX files to readable Markdown.")
     parser.add_argument("--input", nargs="+", required=True, help="DOCX file paths or directories")
     parser.add_argument("--output-dir", help="Optional output directory for generated markdown files")
