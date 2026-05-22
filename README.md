@@ -548,9 +548,12 @@ cd skill项目
 
 # 安装依赖（Python 3.10+）
 pip install -r requirements.txt
+# 如需导出 DOCX，还需安装 pandoc（非 Python 包，需单独下载）
+# Windows: https://github.com/jgm/pandoc/releases/latest
+# macOS: brew install pandoc
 ```
 
-> **依赖说明**：`mammoth` 用于 DOCX→Markdown 转换，`markdownify` 用于 HTML→Markdown，`matplotlib` + `Pillow` 用于生成 DNA 特征云图，`PyYAML` 读取配置文件。
+> **依赖说明**：`mammoth` 用于 DOCX→Markdown 转换，`markdownify` 用于 HTML→Markdown，`matplotlib` + `Pillow` 用于生成 DNA 特征云图，`PyYAML` 读取配置文件。**pandoc** 是 `md_to_docx.py` 的依赖（用于 Markdown→DOCX 转换），不是 pip 包，需要从 [pandoc 官网](https://pandoc.org/installing.html) 单独下载安装。不装 pandoc 不影响核心功能（DNA 提取、改写），只是无法生成 `.docx` 文件。
 
 #### 第二步：放入样本
 

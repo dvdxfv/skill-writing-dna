@@ -530,9 +530,12 @@ cd skill-writing-dna
 
 # Install dependencies (Python 3.10+)
 pip install -r requirements.txt
+# For DOCX export, also install pandoc (not a pip package)
+# Windows: https://github.com/jgm/pandoc/releases/latest
+# macOS: brew install pandoc
 ```
 
-> **Dependencies**: `mammoth` for DOCX→Markdown conversion, `markdownify` for HTML→Markdown, `matplotlib` + `Pillow` for DNA feature cloud visualization, `PyYAML` for config parsing.
+> **Dependencies**: `mammoth` for DOCX→Markdown conversion, `markdownify` for HTML→Markdown, `matplotlib` + `Pillow` for DNA feature cloud visualization, `PyYAML` for config parsing. **pandoc** is required by `md_to_docx.py` for Markdown→DOCX conversion — it's not a pip package and must be installed separately from [pandoc.org](https://pandoc.org/installing.html). Without pandoc, core features (DNA extraction, rewriting) work fine; only `.docx` export is unavailable.
 
 #### Step 2: Drop Your Samples
 
