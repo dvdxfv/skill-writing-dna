@@ -5,6 +5,7 @@ Extract a reusable writing DNA profile from a user's past writing samples.
 
 import argparse
 import json
+import random
 import re
 import sys
 from collections import Counter
@@ -16,6 +17,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
+from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).parent))
 from ai_slop_dict import ALL_SLOP, detect_slop
@@ -233,80 +235,129 @@ def render_hotwords_image(
     hotwords: list[dict[str, Any]],
     output_path: str | Path,
     user_name: str,
-    top_n: int = 12,
+    top_n: int = 18,
 ) -> None:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     font_path = pick_cjk_font()
-    font_props = font_manager.FontProperties(fname=font_path) if font_path else None
-    plt.rcParams["axes.unicode_minus"] = False
+    if not font_path:
+        raise FileNotFoundError("No CJK font found under C:/Windows/Fonts")
 
     top_items = hotwords[:top_n]
+    canvas_width = 1600
+    canvas_height = 980
+    margin = 48
+    title_height = 150
+    palette = [
+        "#2F5D9F",
+        "#3A7CA5",
+        "#3DBB9A",
+        "#59C36A",
+        "#A7D129",
+        "#6C43A6",
+        "#1D9BB5",
+        "#274690",
+    ]
+
+    image = Image.new("RGB", (canvas_width, canvas_height), "#ffffff")
+    draw = ImageDraw.Draw(image)
+    title_font = ImageFont.truetype(font_path, size=54)
+    subtitle_font = ImageFont.truetype(font_path, size=24)
+    footer_font = ImageFont.truetype(font_path, size=26)
+
+    draw.text((margin, 34), f"{user_name} 写作 DNA 特征云", fill="#222222", font=title_font)
+    draw.text(
+        (margin, 98),
+        "展示的是稳定写作资产，而不是普通高频词统计",
+        fill="#666666",
+        font=subtitle_font,
+    )
+
     if not top_items:
-        fig, ax = plt.subplots(figsize=(10, 4), dpi=180)
-        ax.axis("off")
-        ax.text(
-            0.5,
-            0.5,
-            f"{user_name} 写作 DNA 热词图\n\n未提取到稳定热词",
-            ha="center",
-            va="center",
-            fontsize=16,
-            fontproperties=font_props,
+        empty_font = ImageFont.truetype(font_path, size=42)
+        message = "未提取到稳定写作特征"
+        bbox = draw.textbbox((0, 0), message, font=empty_font)
+        draw.text(
+            ((canvas_width - (bbox[2] - bbox[0])) // 2, canvas_height // 2),
+            message,
+            fill="#666666",
+            font=empty_font,
         )
-        fig.savefig(output_path, bbox_inches="tight", facecolor="#f7f3ea")
-        plt.close(fig)
+        image.save(output_path)
         return
 
-    words = [item["phrase"] for item in reversed(top_items)]
-    scores = [item["score"] for item in reversed(top_items)]
-    counts = [item["total_count"] for item in reversed(top_items)]
+    scores = [float(item.get("score", 0)) for item in top_items]
+    max_score = max(scores)
+    min_score = min(scores)
+    spread = max(max_score - min_score, 1.0)
+    occupied: list[tuple[int, int, int, int]] = []
+    random.seed(42)
 
-    fig_height = max(5.5, 0.5 * len(words) + 2.4)
-    fig, ax = plt.subplots(figsize=(11, fig_height), dpi=180)
-    fig.patch.set_facecolor("#f7f3ea")
-    ax.set_facecolor("#fffdf8")
+    def intersects(box: tuple[int, int, int, int], padding: int = 14) -> bool:
+        x1, y1, x2, y2 = box
+        for ox1, oy1, ox2, oy2 in occupied:
+            if not (x2 + padding < ox1 or x1 - padding > ox2 or y2 + padding < oy1 or y1 - padding > oy2):
+                return True
+        return False
 
-    bars = ax.barh(
-        range(len(words)),
-        scores,
-        color="#9c4f2e",
-        edgecolor="#6d3218",
-        height=0.68,
+    for idx, item in enumerate(top_items):
+        word = str(item.get("phrase", "")).strip()
+        if not word:
+            continue
+
+        score = float(item.get("score", 0))
+        norm = (score - min_score) / spread
+        font_size = int(42 + norm * 108)
+        if len(word) >= 8:
+            font_size -= 12
+        if len(word) >= 14:
+            font_size -= 18
+        font_size = max(font_size, 30)
+        color = palette[idx % len(palette)]
+        placed = False
+
+        while font_size >= 24 and not placed:
+            font = ImageFont.truetype(font_path, size=font_size)
+            bbox = draw.textbbox((0, 0), word, font=font)
+            width = bbox[2] - bbox[0]
+            height = bbox[3] - bbox[1]
+            max_x = canvas_width - margin - width
+            max_y = canvas_height - margin - height
+            if max_x <= margin or max_y <= title_height:
+                font_size -= 6
+                continue
+
+            for _ in range(360):
+                x = random.randint(margin, max_x)
+                y = random.randint(title_height, max_y)
+                box = (x, y, x + width, y + height)
+                if intersects(box):
+                    continue
+                draw.text((x, y), word, fill=color, font=font)
+                occupied.append(box)
+                placed = True
+                break
+
+            font_size -= 6
+
+        if not placed:
+            font = ImageFont.truetype(font_path, size=24)
+            x = margin
+            y = min(canvas_height - margin - 28, title_height + len(occupied) * 36)
+            draw.text((x, y), word, fill=color, font=font)
+            bbox = draw.textbbox((x, y), word, font=font)
+            occupied.append(bbox)
+
+    footer = "Source: statistical signature phrases"
+    footer_bbox = draw.textbbox((0, 0), footer, font=footer_font)
+    draw.text(
+        (canvas_width - margin - (footer_bbox[2] - footer_bbox[0]), canvas_height - 42),
+        footer,
+        fill="#888888",
+        font=footer_font,
     )
-    ax.set_yticks(range(len(words)))
-    ax.set_yticklabels(words, fontproperties=font_props, fontsize=11)
-    ax.grid(axis="x", linestyle="--", alpha=0.25)
-    ax.set_axisbelow(True)
-    ax.set_title(f"{user_name} 写作 DNA 热词图", fontproperties=font_props, fontsize=18, pad=18)
-    fig.text(
-        0.125,
-        0.94,
-        "基于多篇旧文提取的高频且跨文档复现短语",
-        fontsize=10,
-        color="#5e5e5e",
-        fontproperties=font_props,
-    )
-    ax.set_xlabel("热词分数", fontproperties=font_props, fontsize=10)
-
-    score_padding = max(scores) * 0.015 if scores else 0.2
-    for bar, score, count in zip(bars, scores, counts):
-        ax.text(
-            bar.get_width() + score_padding,
-            bar.get_y() + bar.get_height() / 2,
-            f"score={score}  count={count}",
-            va="center",
-            fontsize=9,
-            color="#333333",
-        )
-
-    for spine in ["top", "right", "left"]:
-        ax.spines[spine].set_visible(False)
-
-    fig.tight_layout(rect=(0, 0, 1, 0.93))
-    fig.savefig(output_path, bbox_inches="tight", facecolor=fig.get_facecolor())
-    plt.close(fig)
+    image.save(output_path)
 
 
 def extract_dna(docs: list[dict[str, str]], user_name: str) -> dict[str, Any]:
@@ -405,7 +456,7 @@ def main():
     parser.add_argument("--output", help="Optional output JSON path; defaults to <user-name>-dna.json")
     parser.add_argument(
         "--hotwords-image",
-        help="Optional output PNG path for the hotwords image; defaults to <json-output-stem>_hotwords.png",
+        help="Optional output PNG path for the statistical signature-phrase feature cloud; defaults to <json-output-stem>_hotwords.png",
     )
     args = parser.parse_args()
 
@@ -433,7 +484,7 @@ def main():
     output_path.write_text(json.dumps(dna, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print(f"DNA written to: {output_path}")
-    print(f"Hotwords image written to: {hotwords_image_path}")
+    print(f"Feature cloud image written to: {hotwords_image_path}")
     print(f"  Chinese chars: {dna['total_chinese_chars']}")
     print(f"  Signature phrases: {len(dna['signature_phrases'])}")
     print(f"  Avg sentence length: {dna['sentence_features']['avg_length_chars']}")

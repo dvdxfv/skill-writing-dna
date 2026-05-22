@@ -29,7 +29,7 @@ See [AI_INSTALL.md](AI_INSTALL.md) for the full install checklist. Its installer
 | Codex | `~/.codex/prompts/writing-dna.md` | `/writing-dna` |
 | Claude Code | `~/.claude/commands/writing-dna.md` | `/writing-dna` |
 | Cursor | Current project `.cursor/commands/writing-dna.md` | `/writing-dna` |
-| Trae / Trae Solo | `~/.trae/skills/writing-dna/SKILL.md` plus current project `.trae/skills/writing-dna/SKILL.md` | Best-effort registration based on this repo's current convention; use `/writing-dna` or the tool's skill entry |
+| Trae / SOLO | `~/.trae/commands/writing-dna.md` plus `~/.trae/skills/writing-dna/SKILL.md`, and project `.trae/commands/` / `.trae/skills/` | Try `/writing-dna` first; if the current Trae build does not load third-party slash commands, fall back to natural-language Skill auto-trigger |
 
 ---
 
@@ -116,9 +116,9 @@ python scripts/test_sample_sufficiency.py
 ```
 The test tells you: whether you need more samples, whether type diversity is the issue, or whether the extraction rules need tuning.
 
-<!-- Figure 2: DNA Hotwords -->
-![DNA Hotwords](./docs/images/user_dna_hotwords_example.png)
-*Figure 2 · DNA Hotwords: bigger text = higher frequency, instantly see your signature expressions*
+<!-- Figure 2: DNA Feature Cloud -->
+![DNA Feature Cloud](./docs/images/user_dna_hotwords_example.png)
+*Figure 2 · DNA Feature Cloud: bigger text means stronger stable writing assets, not raw frequency stats*
 
 ---
 
@@ -559,7 +559,7 @@ python run.py rewrite
 | Output | Path |
 |:---|:---|
 | DNA profile (JSON) | `outputs/dna_profiles/<YourName>-dna.json` |
-| DNA hotwords chart (PNG) | `outputs/dna_profiles/<YourName>-dna_hotwords.png` |
+| DNA feature cloud (PNG) | `outputs/dna_profiles/<YourName>-dna_hotwords.png` (statistical signature-phrase cloud) or `<YourName>-dna_feature_cloud.png` (formal semantic feature cloud) |
 | Rewritten final draft | `outputs/rewrite_runs/rewritten_draft.md` |
 | Rewrite comparison report | `outputs/rewrite_runs/report.md` |
 | Rewrite debug info | `outputs/rewrite_runs/rewrite_debug.json` |
@@ -638,6 +638,6 @@ python scripts/generate_report.py --original inputs/ai_drafts/your-draft.md --re
 | Figure | Image file | Section |
 |:---:|:---|:---|
 | Fig 1 | `ai_slop_report.png` | Below flowchart · AI slop detection |
-| Fig 2 | `user_dna_hotwords_example.png` | After Step 4 DNA confirmation · Hotwords cloud |
+| Fig 2 | `user_dna_hotwords_example.png` | After Step 4 DNA confirmation · DNA feature cloud |
 | Fig 3 | `comparison_report.png` | After Step 7 result confirmation · Before/after comparison |
 | Fig 4 | `md_raw_wps_garbled.png` + `wps_docx_effect.png` | Step 8 Delivery · MD garbled vs DOCX formatted |

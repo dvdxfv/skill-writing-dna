@@ -66,6 +66,20 @@ def build_targets(root: Path, project: Path | None) -> list[InstallTarget]:
         InstallTarget(
             "trae",
             "user",
+            root / ".trae" / "commands" / "writing-dna.md",
+            user_home / ".trae" / "commands" / "writing-dna.md",
+            "Best-effort Trae/SOLO slash command candidate. If not shown, use Skill auto-trigger.",
+        ),
+        InstallTarget(
+            "trae",
+            "project",
+            root / ".trae" / "commands" / "writing-dna.md",
+            project_root / ".trae" / "commands" / "writing-dna.md",
+            "Best-effort Trae/SOLO project slash command candidate.",
+        ),
+        InstallTarget(
+            "trae",
+            "user",
             root / ".trae" / "skills" / "writing-dna" / "SKILL.md",
             user_home / ".trae" / "skills" / "writing-dna" / "SKILL.md",
             "Best-effort Trae/Solo user-level skill install path.",

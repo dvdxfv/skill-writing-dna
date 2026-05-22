@@ -29,7 +29,7 @@
 | Codex | `~/.codex/prompts/writing-dna.md` | `/writing-dna` |
 | Claude Code | `~/.claude/commands/writing-dna.md` | `/writing-dna` |
 | Cursor | 当前项目 `.cursor/commands/writing-dna.md` | `/writing-dna` |
-| Trae / Trae Solo | `~/.trae/skills/writing-dna/SKILL.md` + 当前项目 `.trae/skills/writing-dna/SKILL.md` | 按当前项目约定 best-effort 注册，使用 `/writing-dna` 或工具内 skill 入口 |
+| Trae / SOLO | `~/.trae/commands/writing-dna.md` + `~/.trae/skills/writing-dna/SKILL.md` + 当前项目 `.trae/commands/` / `.trae/skills/` | 优先尝试 `/writing-dna`；如果当前 Trae 版本不加载第三方 slash command，则退回自然语言自动触发 |
 
 ---
 
@@ -105,7 +105,7 @@ flowchart TD
 
 | # | 模型会给你看什么 | 怎么判断对不对 | 不对劲怎么办 |
 |:---:|:---|:---|:---|
-| 1 | 你最爱用的 15 个高频短语（+ 热词云图） | 有没有"我从来没说过这个"？少了自己常用的词？ | 告诉模型"XX 不是我说的，换成 YY" |
+| 1 | 你最有代表性的写作特征（+ DNA 特征云） | 有没有"我从来没说过这个"？少了自己常用的表达？ | 告诉模型"XX 不是我说的，换成 YY" |
 | 2 | "你平均每句 XX 字，短句占 XX%" | 跟你平时的句子节奏像不像？你喜欢长句还是短句？ | 告诉模型"我一般 XX 字一句" |
 | 3 | "以下是判定为你从不用的 AI 套话" | 有没有把自己的口头禅误杀了？ | 指出误杀项 → 模型帮你从黑名单移除 |
 | 4 | "你的文章通常以……开头，以……结尾" | 跟你平时起手/收尾方式像不像？ | 复制你真实的开头/结尾发给模型替换 |
@@ -116,9 +116,9 @@ python scripts/test_sample_sufficiency.py
 ```
 测试会直接告诉你：是样本不够（补文档）、还是样本类型太单一（加不同类型的）、还是够了但提取规则要调。
 
-<!-- 图2：DNA 热词云图 -->
-![DNA热词云图](./docs/images/user_dna_hotwords_example.png)
-*图2 · DNA 热词云图：字越大用词越高频，一眼看出你的标志性表达*
+<!-- 图2：DNA 特征云 -->
+![DNA特征云](./docs/images/user_dna_hotwords_example.png)
+*图2 · DNA 特征云：字越大越能代表稳定写作资产，而不是普通词频统计*
 
 ---
 
@@ -134,7 +134,7 @@ python scripts/test_sample_sufficiency.py
 | 4 | 完整的改写稿全文 | 整体读下来能不能直接发布/提交？还是还得自己改一轮？ | "还需微调" → 指出具体段落 → 定点修改 |
 
 **如果整体都不满意** → 别急着反复改写，按这个顺序排查：
-1. **DNA 准不准？** — 回看热词图和签名短语，第4步是不是草率确认的
+1. **DNA 准不准？** — 回看特征云和签名短语，第4步是不是草率确认的
 2. **样本够不够？** — `python scripts/test_sample_sufficiency.py`
 3. **换个模型试试** — 不同模型对风格改写的表现差异很大
 
@@ -577,7 +577,7 @@ python run.py rewrite
 | 产出 | 路径 |
 |:---|:---|
 | DNA画像（JSON） | `outputs/dna_profiles/<你的名字>-dna.json` |
-| DNA热词图（PNG） | `outputs/dna_profiles/<你的名字>-dna_hotwords.png` |
+| DNA特征云（PNG） | `outputs/dna_profiles/<你的名字>-dna_hotwords.png`（统计签名短语词云）或 `<你的名字>-dna_feature_cloud.png`（正式语义特征云） |
 | 改写成品稿 | `outputs/rewrite_runs/rewritten_draft.md` |
 | 改写对比报告 | `outputs/rewrite_runs/report.md` |
 | 改写调试信息 | `outputs/rewrite_runs/rewrite_debug.json` |
@@ -656,7 +656,7 @@ python scripts/generate_report.py --original inputs/ai_drafts/你的草稿.md --
 | 图号 | 图片文件 | 所在章节 |
 |:---:|:---|:---|
 | 图1 | `ai_slop_report.png` | 流程图下方 · AI 味体检结果 |
-| 图2 | `user_dna_hotwords_example.png` | 第4步 DNA 确认后 · 热词云图 |
+| 图2 | `user_dna_hotwords_example.png` | 第4步 DNA 确认后 · DNA 特征云 |
 | 图3 | `comparison_report.png` | 第7步 效果确认后 · 改写前后对比 |
 | 图4 | `md_raw_wps_garbled.png` + `wps_docx_effect.png` | 第8步 交付 · MD 乱码 vs DOCX 排版 |
 

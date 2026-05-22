@@ -8,7 +8,7 @@
 
 ## 安装目标
 
-安装完成后，用户应能在当前 AI 工具里通过 `/writing-dna` 或工具内 skill 入口调用 Writing DNA。
+安装完成后，用户应优先能在当前 AI 工具里通过 `/writing-dna` 调用 Writing DNA。Trae / SOLO 当前版本如果不加载第三方自定义斜杠命令，则应退回为 Skill 自动触发，但安装器仍要写入 Trae slash command 候选文件。
 
 ## 执行步骤
 
@@ -41,7 +41,7 @@ python scripts/install_ai_tool_commands.py --project "目标项目路径"
 | Codex | `~/.codex/prompts/writing-dna.md` | `/writing-dna` |
 | Claude Code | `~/.claude/commands/writing-dna.md` | `/writing-dna` |
 | Cursor | 目标项目 `.cursor/commands/writing-dna.md` | `/writing-dna` |
-| Trae / Trae Solo | `~/.trae/skills/writing-dna/SKILL.md` + 目标项目 `.trae/skills/writing-dna/SKILL.md` | `/writing-dna` 或工具内 skill 入口 |
+| Trae / SOLO | `~/.trae/commands/writing-dna.md` + `~/.trae/skills/writing-dna/SKILL.md` + 目标项目 `.trae/commands/` / `.trae/skills/` | 优先 `/writing-dna`；如平台不加载第三方 slash，则自然语言自动触发 |
 
 ## 回答用户时
 
@@ -49,6 +49,6 @@ python scripts/install_ai_tool_commands.py --project "目标项目路径"
 
 - 已安装到哪些工具入口。
 - 哪些工具需要重启或重新打开项目。
-- 下一步可以输入 `/writing-dna` 试用。
+- 下一步优先输入 `/writing-dna` 试用；如果 Trae / SOLO 不显示该命令，直接说“用 writing-dna 帮我改写/分析风格”触发 Skill。
 
 如果某个工具的注册目录不可写，明确说明失败项和原因，再给出最短的人工补救方式。
