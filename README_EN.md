@@ -4,13 +4,32 @@
 
 Make AI-generated content sound like **you** wrote it.
 
-> 🔌 **How to use**: Works on Trae / Cursor / Claude Code / VS Code (Copilot) / CodeX. Tell your AI tool to install `https://github.com/dvdxfv/skill-writing-dna.git` and you're good to go.
+> 🔌 **How to use**: Works on Trae / Cursor / Claude Code / VS Code (Copilot) / CodeX. Just tell your AI tool:  
+> **"Install this writing-dna skill for me: https://github.com/dvdxfv/skill-writing-dna.git. After installation, I want to call it with `/writing-dna`."**
 
 ![Installation](./docs/images/3cea31070b1b8d378f728da10cf6b9b8.png)
-*Fig · After giving the AI the install link, it auto-completes cloning, dependency installation, and slash command registration*
+*Fig · After giving the AI the install link, it auto-completes cloning, dependency installation, and registers Writing DNA as an available skill*
 
 ![Ready to use](./docs/images/c26597bc7d57f17b0fa6de7d76f8e9dc.png)
 *Fig · Once installed, "Writing DNA" appears in your skill list, ready to use anytime*
+
+### For AI Install Agents
+
+Users should not need to remember commands. When an AI tool receives a request like "install this skill and make `/writing-dna` available", it should automatically:
+
+1. Clone or download this repository.
+2. Install required dependencies.
+3. Register the slash command / skill entrypoint for the current tool.
+4. Tell the user to restart the tool or reopen the project window.
+
+See [AI_INSTALL.md](AI_INSTALL.md) for the full install checklist. Its installer handles:
+
+| Tool | Registration path | Invocation |
+|:---|:---|:---|
+| Codex | `~/.codex/prompts/writing-dna.md` | `/writing-dna` |
+| Claude Code | `~/.claude/commands/writing-dna.md` | `/writing-dna` |
+| Cursor | Current project `.cursor/commands/writing-dna.md` | `/writing-dna` |
+| Trae / Trae Solo | `~/.trae/skills/writing-dna/SKILL.md` plus current project `.trae/skills/writing-dna/SKILL.md` | Best-effort registration based on this repo's current convention; use `/writing-dna` or the tool's skill entry |
 
 ---
 

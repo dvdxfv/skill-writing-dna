@@ -4,13 +4,32 @@
 
 让 AI 生成的内容"听起来像你写的"。
 
-> 🔌 **怎么用**：Trae / Cursor / Claude Code / VS Code (Copilot) / CodeX 都能用。在你的 AI 工具里告诉它 `https://github.com/dvdxfv/skill-writing-dna.git`，安装这个项目即可。
+> 🔌 **怎么用**：Trae / Cursor / Claude Code / VS Code (Copilot) / CodeX 都能用。你只需要在 AI 工具里说：  
+> **“帮我安装这个 writing-dna skill：https://github.com/dvdxfv/skill-writing-dna.git。安装后我要能用 `/writing-dna` 调用。”**
 
 ![安装过程](./docs/images/3cea31070b1b8d378f728da10cf6b9b8.png)
-*图 · 告诉 AI 工具安装链接后，它会自动完成克隆仓库、安装依赖、注册斜杠命令*
+*图 · 告诉 AI 工具安装链接后，它会自动完成克隆仓库、安装依赖，并把 Writing DNA 注册为可用 skill*
 
 ![安装完成](./docs/images/c26597bc7d57f17b0fa6de7d76f8e9dc.png)
 *图 · 安装完成后，「写作 DNA」出现在你的技能列表中，随时可用*
+
+### 给 AI 安装代理看的说明
+
+用户不需要记命令。任何 AI 工具接到“帮我安装这个 skill，并让我能用 `/writing-dna` 调用”的请求时，应自动完成这些事：
+
+1. 克隆或下载本仓库。
+2. 安装必要依赖。
+3. 按当前工具注册 slash command / skill 入口。
+4. 告诉用户重启或重新打开项目窗口。
+
+完整安装清单见 [AI_INSTALL.md](AI_INSTALL.md)。其中的安装器会处理：
+
+| 工具 | 注册位置 | 调用方式 |
+|:---|:---|:---|
+| Codex | `~/.codex/prompts/writing-dna.md` | `/writing-dna` |
+| Claude Code | `~/.claude/commands/writing-dna.md` | `/writing-dna` |
+| Cursor | 当前项目 `.cursor/commands/writing-dna.md` | `/writing-dna` |
+| Trae / Trae Solo | `~/.trae/skills/writing-dna/SKILL.md` + 当前项目 `.trae/skills/writing-dna/SKILL.md` | 按当前项目约定 best-effort 注册，使用 `/writing-dna` 或工具内 skill 入口 |
 
 ---
 
