@@ -8,6 +8,25 @@ Make AI-generated content sound like **you** wrote it.
 
 ---
 
+## What This Skill Solves
+
+AI-generated writing has two stubborn problems:
+
+1. **AI clichés won't go away** — "leverage," "empower," "ecosystem," "in the wave of digital transformation." No matter your topic, AI insists on padding it with these phrases
+2. **The voice is wrong** — sentence rhythm, paragraph flow, opening and closing habits are not yours. It reads like someone else wrote it
+
+This Skill's approach isn't "write a smarter prompt." It solves the problem in three layers:
+
+| Layer | What it does | How |
+|:---|:---|:---|
+| 🧹 **Layer 1** | Universal template detection & stripping | Cross-document alignment — auto-discovers recurring template passages in any genre, without genre-specific presets |
+| 🧬 **Layer 2** | Writing style DNA extraction | Extracts your word habits, sentence rhythm, and opening/closing patterns from your own writing |
+| ✏️ **Layer 3** | DNA-driven rewriting | Rewrites AI drafts using your DNA — removes clichés, implants your signature expressions |
+
+Key design: **Layer 1 is genre-agnostic** — it doesn't preset "what a bureaucratic template looks like" or "what a social media template looks like." It discovers templates by comparing recurrence rates across documents. Whether you write government reports, technical docs, blog posts, or academic papers, it automatically detects and strips template content.
+
+Two mandatory human checkpoints are built in — Is the DNA profile accurate? (🔵 Step 4) and Is the rewrite good enough? (🔵 Step 7) — because when it comes to style, the final call must be yours.
+
 ## Workflow Overview
 
 ### One-Liner
