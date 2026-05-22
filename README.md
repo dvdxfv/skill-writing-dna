@@ -6,6 +6,12 @@
 
 > 🔌 **怎么用**：Trae / Cursor / Claude Code / VS Code (Copilot) / CodeX 都能用。在你的 AI 工具里告诉它 `https://github.com/dvdxfv/skill-writing-dna.git`，安装这个项目即可。
 
+![安装过程](./docs/images/3cea31070b1b8d378f728da10cf6b9b8.png)
+*图 · 告诉 AI 工具安装链接后，它会自动完成克隆仓库、安装依赖、注册斜杠命令*
+
+![安装完成](./docs/images/c26597bc7d57f17b0fa6de7d76f8e9dc.png)
+*图 · 安装完成后，「写作 DNA」出现在你的技能列表中，随时可用*
+
 ---
 
 ## Skill 解决什么

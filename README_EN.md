@@ -6,6 +6,12 @@ Make AI-generated content sound like **you** wrote it.
 
 > 🔌 **How to use**: Works on Trae / Cursor / Claude Code / VS Code (Copilot) / CodeX. Tell your AI tool to install `https://github.com/dvdxfv/skill-writing-dna.git` and you're good to go.
 
+![Installation](./docs/images/3cea31070b1b8d378f728da10cf6b9b8.png)
+*Fig · After giving the AI the install link, it auto-completes cloning, dependency installation, and slash command registration*
+
+![Ready to use](./docs/images/c26597bc7d57f17b0fa6de7d76f8e9dc.png)
+*Fig · Once installed, "Writing DNA" appears in your skill list, ready to use anytime*
+
 ---
 
 ## What This Skill Solves
