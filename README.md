@@ -356,19 +356,22 @@ python scripts/test_sample_sufficiency.py
 
 **症状：** DNA 里混入大量套话/格式化内容，或者提取出的特征太少
 
+模板剥离脚本 `scripts/strip_template.py` 在 `run.py pipeline` 时已自动跑过一次，并生成了 `outputs/template_profiles/strip_report.md`。打开它检查：
+
 ```bash
-python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/template_profiles/template_profile.json --output-md outputs/template_profiles/template_profile.md
+# 如想换阈值重跑（默认 60%）：
+python scripts/strip_template.py --input inputs/filtered_markdown --output-dir inputs/template_stripped_markdown --doc-ratio-threshold 0.6 --report outputs/template_profiles/strip_report.md
 ```
 
-查看 `template_profile.md` 中的 **平均保留率**：
+查看 `strip_report.md` 中的三段（重复章节标题 / 字面整句重复 / ≥8 字高频长短语）：
 
-| 保留率 | 含义 | 怎么办 |
-|:---:|:---|:---|
-| **< 30%** | 剥离过度，个人正文被误删 | 编辑 `scripts/strip_template.py`，把误删的模式从规则中移除或放宽，然后重新跑 `run.py pipeline` + `run.py extract` |
-| **30% ~ 70%** | 正常范围 | 继续看第③步 |
-| **> 70%** | 剥离不足，模板噪声混入 DNA | 编辑 `scripts/strip_template.py`，补充遗漏的模板模式（参考报告中"跨文档重复段落"），然后重新跑 |
+| 现象 | 含义 | 怎么办 |
+|:---|:---|:---|
+| 报告把你的**个人风格短语**也当成模板剥了 | 阈值太宽 → 误杀 | 把 `--doc-ratio-threshold` 调高（如 `0.8` 表示需要 8/10 篇都出现才算模板） |
+| 报告漏了明显模板（每篇都有但没抓到） | 阈值太严或 ngram 起点太长 | 调低阈值（如 `0.5`）或缩短 `--min-ngram` |
+| 报告基本对，但还有"结构相同但内容不同"的模板留下 | Layer 1 处理不了语义模板（这是设计预期） | 这是 Layer 2 的工作——由 LLM 在对话里识别并和你确认（见 [SKILL.md](SKILL.md) Step 1.5b/c） |
 
-> 💡 报告中的"模板级标题"和"个人正文标题"分类会告诉你哪些内容被排除了、哪些保留了。
+> 💡 PRD §8.1.3 把模板剥离设计为三层：Layer 1 是这个脚本做的"跨文档字面对齐"；Layer 2 是 LLM 在对话里做的"语义模板识别"；Layer 3 是你确认。脚本只负责前者，不要期待它识别所有文体的语义模板。
 
 ---
 
@@ -543,9 +546,6 @@ python scripts/strip_template.py --input inputs/filtered_markdown/*.md --output-
 
 # 样本充足性诊断（可选，建议5篇以上运行）
 python scripts/test_sample_sufficiency.py
-
-# 模板画像提取（可选，查看模板vs个人风格分界线）
-python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/template_profiles/template_profile.json --output-md outputs/template_profiles/template_profile.md
 
 # DNA提取
 python scripts/extract_dna.py --input inputs/template_stripped_markdown/*.md --user-name 你的名字 --output outputs/dna_profiles/你的名字-dna.json

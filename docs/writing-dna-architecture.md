@@ -262,7 +262,7 @@ DNA 只能从模板之外，或模板内部的个人表达差异中提。
 
 - `docx_to_md.py`
 - `filter_non_prose.py`
-- `extract_template_profile.py`
+- `strip_template.py`（跨文档对齐 · 通用模板剥离 · PRD §8.1.3 Layer 1）
 - `extract_dna.py`
 - `detect_ai_slop.py`
 - `rewrite_with_dna.py`

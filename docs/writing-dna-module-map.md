@@ -69,12 +69,14 @@
 
 - `inputs/filtered_markdown/*.md`
 
-### 3.3 `scripts/extract_template_profile.py`
+### 3.3 `scripts/strip_template.py`
 
-职责：
+职责（PRD §8.1.3 · Layer 1）：
 
-- 从多篇同类业务文档里提取重复模板结构
-- 区分模板表达和个人表达
+- 跨文档对齐检测，识别该文体的"模板内容"并剥离
+- 三个并行通道：跨 ≥60% 文档重复的章节标题、字面整句、≥8 字长短语
+- 不依赖任何文体先验——适用于任何文体（论文/邮件/公众号/政府报告/合同/新闻稿/小说/产品文档/...）
+- Layer 2（语义模板识别）+ Layer 3（用户确认）由 SKILL.md 引导 LLM 在对话中完成，不在脚本里
 
 输入：
 
@@ -82,19 +84,18 @@
 
 输出：
 
-- `outputs/template_profiles/template_profile.json`
-- `outputs/template_profiles/template_profile.md`
+- `inputs/template_stripped_markdown/*.md`（剥离后的正文，作为 DNA 提取的真正输入）
+- `outputs/template_profiles/strip_report.md`（剥离报告：列出每个被识别为模板的标题/整句/长短语）
 
 ### 3.4 `scripts/extract_dna.py`
 
 职责：
 
-- 只从过滤后、且尽量剥离模板后的正文里提取个人写作 DNA
+- 只从模板已剥离后的正文里提取个人写作 DNA
 
 输入：
 
-- `inputs/filtered_markdown/*.md`
-- 可选：`outputs/template_profiles/template_profile.json`
+- `inputs/template_stripped_markdown/*.md`（必须是 strip_template.py 处理过的产物）
 
 输出：
 
@@ -168,7 +169,7 @@
 
 1. `docx_to_md.py`
 2. `filter_non_prose.py`
-3. `extract_template_profile.py`
+3. `strip_template.py`（跨文档对齐 · 通用模板剥离 · PRD §8.1.3 Layer 1）
 4. `extract_dna.py`
 5. `detect_ai_slop.py`
 6. `rewrite_with_dna.py`

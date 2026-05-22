@@ -344,19 +344,22 @@ Report output to `outputs/debug/sample_sufficiency_test.md`. Check these two met
 
 **Symptom**: DNA mixed with lots of boilerplate/formatted content, or too few features extracted
 
+`scripts/strip_template.py` already ran during `run.py pipeline` and produced `outputs/template_profiles/strip_report.md`. Open it to inspect:
+
 ```bash
-python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/template_profiles/template_profile.json --output-md outputs/template_profiles/template_profile.md
+# To re-run with a different threshold (default 60%):
+python scripts/strip_template.py --input inputs/filtered_markdown --output-dir inputs/template_stripped_markdown --doc-ratio-threshold 0.6 --report outputs/template_profiles/strip_report.md
 ```
 
-Check **average retention rate** in `template_profile.md`:
+The report has three sections (repeated headings / literal repeated sentences / ≥8-char repeated long phrases):
 
-| Retention | Meaning | Action |
-|:---:|:---|:---|
-| **< 30%** | Over-stripping — personal content removed | Edit `scripts/strip_template.py`, remove/relax over-aggressive rules, re-run pipeline + extract |
-| **30% ~ 70%** | Normal range | Continue to step ③ |
-| **> 70%** | Under-stripping — template noise in DNA | Edit `scripts/strip_template.py`, add missing template patterns (check "cross-document repeated paragraphs" in report), re-run |
+| Symptom | Meaning | Action |
+|:---|:---|:---|
+| Personal-style phrases mis-flagged as template | Threshold too loose → false positives | Raise `--doc-ratio-threshold` (e.g. `0.8` = must appear in 8/10 docs to count) |
+| Obvious templates missed (in every doc but not flagged) | Threshold too strict or ngram floor too high | Lower threshold (e.g. `0.5`) or shorten `--min-ngram` |
+| Report mostly correct but "same structure, different content" templates remain | Layer 1 can't handle semantic templates (by design) | This is Layer 2's job — the LLM identifies them in conversation and confirms with you (see [SKILL.md](SKILL.md) Step 1.5b/c) |
 
-> 💡 The report's "template-level headings" and "personal-content headings" classification shows what was excluded and what was retained.
+> 💡 PRD §8.1.3 designs template stripping as three layers: Layer 1 is this script's "cross-doc literal alignment"; Layer 2 is the LLM's in-conversation "semantic template detection"; Layer 3 is your confirmation. The script only handles Layer 1 — don't expect it to detect semantic templates across every genre.
 
 ### ③ DNA Rule Check
 
@@ -525,9 +528,6 @@ python scripts/strip_template.py --input inputs/filtered_markdown/*.md --output-
 
 # Sample sufficiency diagnostics (optional, recommended for 5+ samples)
 python scripts/test_sample_sufficiency.py
-
-# Template profile extraction (optional, check template vs personal style boundary)
-python scripts/extract_template_profile.py --input inputs/filtered_markdown/*.md --output-json outputs/template_profiles/template_profile.json --output-md outputs/template_profiles/template_profile.md
 
 # DNA extraction
 python scripts/extract_dna.py --input inputs/template_stripped_markdown/*.md --user-name YourName --output outputs/dna_profiles/YourName-dna.json

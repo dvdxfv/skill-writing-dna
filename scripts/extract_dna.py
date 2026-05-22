@@ -19,7 +19,6 @@ from matplotlib import font_manager
 
 sys.path.insert(0, str(Path(__file__).parent))
 from ai_slop_dict import ALL_SLOP, detect_slop
-from strip_template import strip_template as _strip_template_prose
 
 
 def configure_utf8_stdio() -> None:
@@ -311,13 +310,11 @@ def render_hotwords_image(
 
 
 def extract_dna(docs: list[dict[str, str]], user_name: str) -> dict[str, Any]:
-    # Strip template boilerplate before analysis so template-heavy docs
-    # (e.g. 绩效评价报告) don't pollute signature phrases and hot words.
-    # _strip_template_prose is a no-op on non-template documents.
-    stripped_docs = [
-        {"filename": d["filename"], "content": _strip_template_prose(d["content"])}
-        for d in docs
-    ]
+    # Template stripping is now handled cross-document by scripts/strip_template.py
+    # in the pipeline stage (PRD §8.1.3 Layer 1) and by SKILL.md prompt + user
+    # confirmation (Layer 2/3). extract_dna assumes docs already have templates
+    # stripped — the input directory should be inputs/template_stripped_markdown/.
+    stripped_docs = docs  # alias preserved for downstream variable names
     cleaned_docs = [clean_markdown(doc["content"]) for doc in stripped_docs]
     all_text = "\n\n".join(cleaned_docs)
 
