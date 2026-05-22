@@ -50,7 +50,7 @@ Everything else runs automatically.
 flowchart TD
     A["📁 1. Drop Samples"] --> B["🔧 2. Auto Preprocess<br/>DOCX convert→Filter→Template strip"]
     B --> C{"🔵 3. Template strip/keep?"}
-    C -->|❌ Adjust| B1["📋 Review strip_report<br/>Adjust strip rules"]
+    C -->|❌ Adjust| B1["📋 Tell AI what's template<br/>Re-judge strip/keep"]
     B1 --> C
     C -->|✅ Confirm| D["🧬 4. Extract DNA<br/>Auto stats + Manual review"]
     D --> E{"🔵 5. DNA accurate?"}
