@@ -15,27 +15,28 @@ AI-generated writing has two stubborn problems:
 1. **AI clichés won't go away** — "leverage," "empower," "ecosystem," "in the wave of digital transformation." No matter your topic, AI insists on padding it with these phrases
 2. **The voice is wrong** — sentence rhythm, paragraph flow, opening and closing habits are not yours. It reads like someone else wrote it
 
-This Skill's approach isn't "write a smarter prompt." It solves the problem in three layers:
+This Skill's approach isn't "write a smarter prompt." It solves the template detection problem in three layers — the core architectural innovation:
 
-| Layer | What it does | How |
-|:---|:---|:---|
-| 🧹 **Layer 1** | Universal template detection & stripping | Cross-document alignment — auto-discovers recurring template passages in any genre, without genre-specific presets |
-| 🧬 **Layer 2** | Writing style DNA extraction | Extracts your word habits, sentence rhythm, and opening/closing patterns from your own writing |
-| ✏️ **Layer 3** | DNA-driven rewriting | Rewrites AI drafts using your DNA — removes clichés, implants your signature expressions |
+| Layer | Who | What | When |
+|:---|:---|:---|:---|
+| 🧹 **Layer 1** | `strip_template.py` script | Cross-document literal alignment — auto-strips template passages recurring in ≥60% of docs (headings / full sentences / ≥8-char phrases) | Pipeline stage, fully automatic |
+| 🤖 **Layer 2** | AI model (in conversation) | Identifies text genre + finds semantic templates — reads strip_report.md, flags "abstract boilerplate" "email pleasantries" "social media CTAs" etc. that need another stripping pass | In conversation, AI gives recommendations |
+| 👤 **Layer 3** | You | Say "strip" or "keep" on Layer 2's findings — should thesis abstracts be stripped? Should "Best regards" in work emails be kept? | In conversation, you decide |
 
-Key design: **Layer 1 is genre-agnostic** — it doesn't preset "what a bureaucratic template looks like" or "what a social media template looks like." It discovers templates by comparing recurrence rates across documents. Whether you write government reports, technical docs, blog posts, or academic papers, it automatically detects and strips template content.
+**Key design**: Layer 1 is completely genre-agnostic — no presets for "what a bureaucratic template looks like." An author doesn't self-plagiarize, so cross-document literal repetition must be format requirements. Layer 2 handles the "structurally identical but semantically different" templates Layer 1 can't catch (short phrases like "indicators mainly assess"), delegating judgment to the AI. Layer 3 requires your sign-off — semantic-level decisions cannot be made by algorithms or models alone.
 
-Two mandatory human checkpoints are built in — Is the DNA profile accurate? (🔵 Step 4) and Is the rewrite good enough? (🔵 Step 7) — because when it comes to style, the final call must be yours.
+The full pipeline has **3 mandatory human checkpoints** — template strip/keep confirmation (🔵 new), DNA profile accuracy (🔵 Step 4), and rewrite quality (🔵 Step 7) — because at every layer, the final call must be yours.
 
 ## Workflow Overview
 
 ### One-Liner
 
 ```
-Drop samples → Auto-process → ⏸️ Review DNA → Drop draft → Auto-rewrite → ⏸️ Review result → Done
+Drop samples → Layer1 auto-strip → ⏸️ Confirm template strip/keep → Extract DNA → ⏸️ Confirm DNA → Drop draft → Rewrite → ⏸️ Confirm result → Done
 ```
 
-**Only 2 points require your attention:**
+**Only 3 points require your attention:**
+- 🆕 **After template stripping** — Confirm Layer 2's semantic template findings
 - 🔵 **After DNA extraction** — Verify the profile is accurate
 - 🔵 **After rewriting** — Confirm the result meets your standards
 
@@ -485,7 +486,7 @@ Run sample sufficiency test
 Convert the rewrite to DOCX
 ```
 
-**Core philosophy:** Everything in conversation. Two mandatory human checkpoints (DNA accurate? Rewrite good enough?), everything else automatic.
+**Core philosophy:** Everything in conversation. Three mandatory human checkpoints (template strip/keep? DNA accurate? Rewrite good enough?), everything else automatic.
 
 ---
 
