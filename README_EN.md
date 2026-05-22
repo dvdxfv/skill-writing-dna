@@ -4,7 +4,7 @@
 
 Make AI-generated content sound like **you** wrote it.
 
-> 🔌 **Works with**: Trae / Cursor / Claude Code / VS Code (Copilot) / CodeX — five platforms, all adapted. Clone, then `pip install -r requirements.txt`, Python 3.10+.
+> 🔌 **How to use**: Works on Trae / Cursor / Claude Code / VS Code (Copilot) / CodeX. Tell your AI tool to install `https://github.com/dvdxfv/skill-writing-dna.git` and you're good to go.
 
 ---
 
