@@ -25,7 +25,7 @@ This Skill's approach isn't "write a smarter prompt." It solves the template det
 
 **Key design**: Layer 1 is completely genre-agnostic — no presets for "what a bureaucratic template looks like." An author doesn't self-plagiarize, so cross-document literal repetition must be format requirements. Layer 2 handles the "structurally identical but semantically different" templates Layer 1 can't catch (short phrases like "indicators mainly assess"), delegating judgment to the AI. Layer 3 requires your sign-off — semantic-level decisions cannot be made by algorithms or models alone.
 
-The full pipeline has **3 mandatory human checkpoints** — template strip/keep confirmation (🔵 new), DNA profile accuracy (🔵 Step 4), and rewrite quality (🔵 Step 7) — because at every layer, the final call must be yours.
+The full pipeline has **3 mandatory human checkpoints** — template strip/keep confirmation (🔵 Step 2), DNA profile accuracy (🔵 Step 4), and rewrite quality (🔵 Step 7) — because at every layer, the final call must be yours.
 
 ## Workflow Overview
 
@@ -36,7 +36,7 @@ Drop samples → Layer1 auto-strip → ⏸️ Confirm template strip/keep → Ex
 ```
 
 **Only 3 points require your attention:**
-- 🆕 **After template stripping** — Confirm Layer 2's semantic template findings
+- 🔵 **After template stripping** — Confirm Layer 2's semantic template findings
 - 🔵 **After DNA extraction** — Verify the profile is accurate
 - 🔵 **After rewriting** — Confirm the result meets your standards
 
