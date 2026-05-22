@@ -49,18 +49,22 @@ Everything else runs automatically.
 ```mermaid
 flowchart TD
     A["📁 1. Drop Samples"] --> B["🔧 2. Auto Preprocess<br/>DOCX convert→Filter→Template strip"]
-    B --> C["🧬 3. Extract DNA<br/>Auto stats + Manual review"]
-    C --> D{"🔵 4. DNA accurate?"}
-    D -->|❌ No| E["🔍 Diagnose samples<br/>Leave-one-out + Saturation curve"]
-    E --> C
-    D -->|✅ Yes| F["📁 5. Drop AI draft"]
-    F --> G["✏️ 6. Rewrite by DNA<br/>Blacklist removal + Connector swap + Signature implant"]
-    G --> H{"🔵 7. Happy with result?"}
+    B --> C{"🔵 3. Template strip/keep?"}
+    C -->|❌ Adjust| B1["📋 Review strip_report<br/>Adjust strip rules"]
+    B1 --> C
+    C -->|✅ Confirm| D["🧬 4. Extract DNA<br/>Auto stats + Manual review"]
+    D --> E{"🔵 5. DNA accurate?"}
+    E -->|❌ No| E1["🔍 Diagnose samples<br/>Leave-one-out + Saturation curve"]
+    E1 --> D
+    E -->|✅ Yes| F["📁 6. Drop AI draft"]
+    F --> G["✏️ 7. Rewrite by DNA<br/>Blacklist removal + Connector swap + Signature implant"]
+    G --> H{"🔵 8. Happy with result?"}
     H -->|❌ No| I["🔄 Switch model / Tune params / Check samples"]
     I --> G
-    H -->|✅ Yes| J["🏆 8. Deliver"]
+    H -->|✅ Yes| J["🏆 9. Deliver"]
 
-    style D fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,color:#0d47a1
+    style C fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,color:#0d47a1
+    style E fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,color:#0d47a1
     style H fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,color:#0d47a1
 ```
 

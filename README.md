@@ -49,18 +49,22 @@ AI 写稿有两个老大难问题：
 ```mermaid
 flowchart TD
     A["📁 1.放入样本"] --> B["🔧 2.自动预处理<br/>DOCX转换→过滤→模板剥离"]
-    B --> C["🧬 3.提取DNA<br/>自动统计+人工复核"]
-    C --> D{"🔵 4.DNA准确吗？"}
-    D -->|❌ 不准| E["🔍 诊断样本<br/>留一法+饱和度曲线"]
-    E --> C
-    D -->|✅ 准确| F["📁 5.放入AI草稿"]
-    F --> G["✏️ 6.按DNA改写<br/>黑名单清除+连接词替换+签名植入"]
-    G --> H{"🔵 7.效果满意吗？"}
+    B --> C{"🔵 3.模板剥留确认？"}
+    C -->|❌ 需调整| B1["📋 查看strip_report<br/>手动调整剥留规则"]
+    B1 --> C
+    C -->|✅ 确认| D["🧬 4.提取DNA<br/>自动统计+人工复核"]
+    D --> E{"🔵 5.DNA准确吗？"}
+    E -->|❌ 不准| E1["🔍 诊断样本<br/>留一法+饱和度曲线"]
+    E1 --> D
+    E -->|✅ 准确| F["📁 6.放入AI草稿"]
+    F --> G["✏️ 7.按DNA改写<br/>黑名单清除+连接词替换+签名植入"]
+    G --> H{"🔵 8.效果满意吗？"}
     H -->|❌ 不满意| I["🔄 换模型/调参数/查样本"]
     I --> G
-    H -->|✅ 满意| J["🏆 8.交付成果"]
+    H -->|✅ 满意| J["🏆 9.交付成果"]
 
-    style D fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,color:#0d47a1
+    style C fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,color:#0d47a1
+    style E fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,color:#0d47a1
     style H fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,color:#0d47a1
 ```
 
