@@ -166,6 +166,7 @@ def cmd_pipeline(args):
         ("模板剥离", "strip_template.py", [
             "--input", str(INPUTS_DIR / "filtered_markdown"),
             "--output-dir", str(INPUTS_DIR / "template_stripped_markdown"),
+            "--report", str(OUTPUTS_DIR / "template_profiles" / "strip_report.md"),
         ]),
     ]
     for name, script, s_args in steps:
@@ -176,7 +177,9 @@ def cmd_pipeline(args):
             print(f"⚠️  {name} 执行失败，停止后续步骤")
             return ret
     print("\n✅ 前置处理链路完成")
-    print("\n接下来需要人工介入：运行 `python run.py extract` 提取 DNA，并复核画像。")
+    print("\n⚠️  第一个必停确认点：请先检查模板剥离报告，确认剥离结果是否正确。")
+    print(f"   报告位置：{OUTPUTS_DIR / 'template_profiles' / 'strip_report.md'}")
+    print("   确认剥离结果无误后，再运行 `python run.py extract` 提取 DNA。")
     return 0
 
 
@@ -185,14 +188,25 @@ def cmd_auto(args):
     stripped_files = _visible_files(INPUTS_DIR / "template_stripped_markdown", ("*.md",))
     dna_files = _visible_files(OUTPUTS_DIR / "dna_profiles", ("*-dna.json",))
     draft_files = _visible_files(INPUTS_DIR / "ai_drafts", ("*.md", "*.txt"))
+    strip_report = OUTPUTS_DIR / "template_profiles" / "strip_report.md"
 
     if not stripped_files:
         print("🔎 未发现模板剥离后的样本，先运行前置处理链路。")
-        return cmd_pipeline(args)
+        ret = cmd_pipeline(args)
+        if ret != 0:
+            return ret
+        print(f"👉 确认后再次运行 `python run.py auto` 继续到下一步（DNA 提取）。")
+        return 0
 
     if not dna_files:
-        print("🔎 已有清洗样本，开始提取 DNA。完成后请先人工确认 DNA 是否准确。")
-        return cmd_extract(args)
+        if strip_report.exists():
+            print("🔎 模板剥离已完成。请先确认剥离报告无误，再提取 DNA。")
+            print(f"   报告位置：{strip_report}")
+            print("   如果已确认，运行 `python run.py extract --user-name <用户名>` 提取 DNA。")
+        else:
+            print("🔎 已有清洗样本，开始提取 DNA。完成后请先人工确认 DNA 是否准确。")
+            return cmd_extract(args)
+        return 0
 
     if not draft_files:
         print("✅ DNA 已存在，下一步请把需要改写的 .md 或 .txt 草稿放入 inputs/ai_drafts/")
@@ -222,6 +236,12 @@ def cmd_status(args):
         else:
             print(f"  ⬜ {name}: (空) — {path}")
 
+    strip_report = OUTPUTS_DIR / "template_profiles" / "strip_report.md"
+    if strip_report.exists():
+        print(f"  ✅ 模板剥离报告: 已生成 — {strip_report}")
+    else:
+        print(f"  ⏸️  模板剥离报告: 未生成 — (运行 pipeline 后自动生成)")
+
     scripts_ok = []
     scripts_placeholder = []
     for s in ["docx_to_md.py", "filter_non_prose.py", "strip_template.py",
@@ -241,12 +261,19 @@ def cmd_status(args):
 
     print(f"\n💡 下一步:")
     raw_count = len(_visible_files(INPUTS_DIR / "raw_docx_articles"))
+    stripped_count = len(_visible_files(INPUTS_DIR / "template_stripped_markdown", ("*.md",)))
     dna_count = len(_visible_files(OUTPUTS_DIR / "dna_profiles", ("*-dna.json",)))
     draft_count = len(_visible_files(INPUTS_DIR / "ai_drafts", ("*.md", "*.txt")))
+    strip_report_exists = (OUTPUTS_DIR / "template_profiles" / "strip_report.md").exists()
+
     if raw_count == 0:
         print("  → 放入原始文档到 inputs/raw_docx_articles/ 后运行 `python run.py pipeline`")
-    elif dna_count == 0:
-        print("  → 运行 `python run.py auto` 自动推进到下一个人工确认点")
+    elif stripped_count == 0:
+        print("  → 运行 `python run.py auto` 启动前置处理链路")
+    elif not strip_report_exists and dna_count == 0:
+        print("  → 运行 `python run.py pipeline` 完成模板剥离")
+    elif strip_report_exists and dna_count == 0:
+        print("  → 🔵 先确认模板剥离报告无误，然后运行 `python run.py extract --user-name <用户名>`")
     elif draft_count == 0:
         print("  → 放入AI草稿到 inputs/ai_drafts/ 后运行 `python run.py auto`")
     else:
