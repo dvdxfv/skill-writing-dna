@@ -8,10 +8,10 @@ Make AI-generated content sound like **you** wrote it.
 > **"Install this writing-dna skill for me: https://github.com/dvdxfv/skill-writing-dna.git. After installation, I want to call it with `/writing-dna`."**
 
 ![Installation](./docs/images/3cea31070b1b8d378f728da10cf6b9b8.png)
-*Fig · After giving the AI the install link, it auto-completes cloning, dependency installation, and registers Writing DNA as an available skill*
+*Fig 1 · After giving the AI the install link, it auto-completes cloning, dependency installation, and registers Writing DNA as an available skill*
 
 ![Ready to use](./docs/images/c26597bc7d57f17b0fa6de7d76f8e9dc.png)
-*Fig · Once installed, "Writing DNA" appears in your skill list, ready to use anytime*
+*Fig 2 · Once installed, "Writing DNA" appears in your skill list, ready to use anytime*
 
 ### For AI Install Agents
 
@@ -95,9 +95,8 @@ flowchart TD
 
 > 🔵 **Blue diamonds = mandatory human judgment points. The model cannot decide for you.**
 
-<!-- Figure 1: AI Slop Detection -->
 ![AI Slop Detection](./docs/images/ai_slop_report.png)
-*Figure 1 · AI Slop Detection: higher score = stronger AI-flavor, details show which clichés were hit*
+*Fig 3 · AI Slop Detection: higher score = stronger AI-flavor, details show which clichés were hit*
 
 ### 🔵 Step 4: Is the DNA Accurate? — 4 Items You Must Check
 
@@ -116,9 +115,8 @@ python scripts/test_sample_sufficiency.py
 ```
 The test tells you: whether you need more samples, whether type diversity is the issue, or whether the extraction rules need tuning.
 
-<!-- Figure 2: DNA Feature Cloud -->
 ![DNA Feature Cloud](./docs/images/user_dna_hotwords_example.png)
-*Figure 2 · DNA Feature Cloud: bigger text means stronger stable writing assets, not raw frequency stats*
+*Fig 4 · DNA Feature Cloud: bigger text means stronger stable writing assets, not raw frequency stats*
 
 ---
 
@@ -138,9 +136,8 @@ After rewriting and generating the comparison report, the model **stops and wait
 2. **Are samples sufficient?** — `python scripts/test_sample_sufficiency.py`
 3. **Try a different model** — Model performance varies significantly for style rewriting
 
-<!-- Figure 3: Before/After Comparison -->
 ![Comparison](./docs/images/comparison_report.png)
-*Figure 3 · Before/After: original on the left, rewritten on the right — AI-flavor reduction at a glance*
+*Fig 5 · Before/After: original on the left, rewritten on the right — AI-flavor reduction at a glance*
 
 ### ✅ Step 8: Delivery
 
@@ -159,9 +156,7 @@ All outputs in `outputs/rewrite_runs/`:
 | `rewritten_draft.docx` | 📄 WPS/Word ready, formatted version (opt-in) |
 | `rewrite_debug.json` | 🔧 Detailed metrics (generally ignore) |
 
-<!-- Figure 4: MD garbled in WPS vs DOCX conversion -->
-
-*Figure 4 · MD Garbled vs DOCX: Left — Markdown pasted directly into WPS is unreadable. Right — auto-converted DOCX is clean and properly formatted.*
+*Fig 6 · MD Garbled vs DOCX: Left — Markdown pasted directly into WPS is unreadable. Right — auto-converted DOCX is clean and properly formatted.*
 
 | MD pasted into WPS | DOCX after conversion |
 |:---:|:---:|
@@ -169,7 +164,11 @@ All outputs in `outputs/rewrite_runs/`:
 
 ---
 
+<a id="about-samples"></a>
+
 ## About Samples
+
+> 📖 **Further reading**: Not sure if your samples are enough? Run the [Sample Sufficiency Test](#sample-sufficiency-test) to diagnose.
 
 ### Recommended Sample Size
 
@@ -231,6 +230,8 @@ If you only submit one type of writing, the DNA gets contaminated by industry te
 | Folder | Auto-scans all `.docx` / `.md` / `.txt` files |
 
 ---
+
+<a id="about-models"></a>
 
 ## About Models
 
@@ -368,7 +369,11 @@ Problem appears
 ④ Switch model / tune params → Re-run rewrite
 ```
 
+<a id="sample-sufficiency-test"></a>
+
 ### ① Sample Sufficiency Test
+
+> 📖 **Further reading**: For detailed advice on sample size and type diversity, see [About Samples](#about-samples) below.
 
 **Symptom**: DNA features are sparse, generic, or "this doesn't feel like me"
 
@@ -429,7 +434,11 @@ After manually editing the DNA JSON, re-run:
 python run.py rewrite
 ```
 
+<a id="model-parameter-tuning"></a>
+
 ### ④ Model & Parameter Tuning
+
+> 📖 **Further reading**: Model choice matters significantly — see the full cross-model benchmark under [About Models](#about-models) below.
 
 **Symptom**: Above three steps all confirmed OK, but rewrite quality still unsatisfactory
 
@@ -602,45 +611,78 @@ python scripts/generate_report.py --original inputs/ai_drafts/your-draft.md --re
 ## Project Structure
 
 ```
-├── inputs/
-│   ├── raw_docx_articles/      ← Your original DOCX files
-│   ├── normalized_markdown/    ← DOCX converted to Markdown
-│   ├── filtered_markdown/      ← Non-prose filtered
-│   ├── template_stripped_markdown/ ← Template stripped (DNA extraction input)
-│   └── ai_drafts/              ← AI drafts (for rewrite comparison)
-│
-├── outputs/
-│   ├── dna_profiles/           ← DNA main output + feature cloud
-│   ├── rewrite_runs/           ← Rewrite results + notes
-│   └── debug/                  ← Test reports (saturation / leave-one-out)
-│
-├── scripts/                    ← Processing scripts
-├── docs/                       ← Project design docs
-├── .cursor/rules/              ← Cursor rules (auto-loaded)
-├── .claude/                    ← Claude Code instructions
-├── .github/                    ← VS Code Copilot instructions
-├── .codex/rules/               ← CodeX rules
-├── SKILL.md                    ← Full skill workflow (Trae native format)
-└── WRITING_DNA.md              ← Cross-platform universal instructions (no Trae header)
-
----
-
-## Recommended Reading
-
-- [SKILL.md](SKILL.md) — Full skill workflow definition (Trae native format)
-- [WRITING_DNA.md](WRITING_DNA.md) — Cross-platform universal instructions (Cursor / Claude Code / VS Code / CodeX shared)
-- [PROJECT_STATUS.md](PROJECT_STATUS.md) — Project progress, resource consumption, pending items
-- [docs/writing-dna-architecture.md](docs/writing-dna-architecture.md) — System architecture
-
----
-
-## Screenshots
-
-4 images in the README, all located in `docs/images/`:
-
-| Figure | Image file | Section |
-|:---:|:---|:---|
-| Fig 1 | `ai_slop_report.png` | Below flowchart · AI slop detection |
-| Fig 2 | `user_dna_hotwords_example.png` | After Step 4 DNA confirmation · DNA feature cloud |
-| Fig 3 | `comparison_report.png` | After Step 7 result confirmation · Before/after comparison |
-| Fig 4 | `md_raw_wps_garbled.png` + `wps_docx_effect.png` | Step 8 Delivery · MD garbled vs DOCX formatted |
+writing-dna/
+├── .claude/                            # Claude Code registration
+│   ├── commands/
+│   │   └── writing-dna.md              # slash command definition
+│   └── writing-dna.md                  # skill entrypoint
+├── .codex/                             # CodeX registration
+│   ├── prompts/
+│   │   └── writing-dna.md              # prompt definition
+│   └── rules/
+│       └── writing-dna.md              # rule definition
+├── .cursor/                            # Cursor registration
+│   ├── commands/
+│   │   └── writing-dna.md              # slash command definition
+│   └── rules/
+│       └── writing-dna.md              # rule definition
+├── .github/
+│   └── copilot-instructions.md         # GitHub Copilot instructions
+├── .trae/                              # Trae / SOLO registration
+│   ├── commands/
+│   │   └── writing-dna.md              # slash command definition
+│   └── skills/
+│       └── writing-dna/
+│           └── SKILL.md                # full skill workflow
+├── docs/                               # docs & image assets
+│   ├── images/                         # README screenshots
+│   │   ├── 3cea31070b1b8d378f728da10cf6b9b8.png  # installation screenshot
+│   │   ├── ai_slop_report.png          # AI slop detection report
+│   │   ├── c26597bc7d57f17b0fa6de7d76f8e9dc.png  # install-complete screenshot
+│   │   ├── comparison_report.png       # before/after comparison
+│   │   ├── md_raw_wps_garbled.png      # MD pasted into WPS (garbled)
+│   │   ├── model_benchmark_example.png # model benchmark sample
+│   │   ├── user_dna_hotwords_example.png # DNA feature cloud
+│   │   └── wps_docx_effect.png         # DOCX formatted output
+│   ├── writing-dna-architecture.md     # system architecture
+│   └── writing-dna-module-map.md       # module relationship map
+├── examples/                           # rewrite examples (input/output)
+│   ├── 01-chatgpt-xiashentan.md        # ChatGPT rewrite sample
+│   ├── 02-notion-ai-zhibuzhi.md        # Notion AI rewrite sample
+│   ├── 03-cursor-diqitian.md           # Cursor rewrite sample
+│   ├── 04-obsidian-xiezai.md           # Obsidian rewrite sample
+│   ├── 05-ai-pm-bietuile.md            # AI PM rewrite sample
+│   └── ai_slop_input.md                # AI slop detection input example
+├── inputs/                             # user sample staging (runtime)
+│   ├── README.md                       # usage notes
+│   ├── filtered_markdown/              # filtered prose
+│   ├── normalized_markdown/            # normalized text
+│   └── template_stripped_markdown/     # template-stripped text
+├── outputs/                            # pipeline output (runtime)
+│   ├── README.md                       # usage notes
+│   ├── debug/                          # debug & diagnostic reports
+│   ├── dna_profiles/                   # DNA profile files
+│   └── rewrite_runs/                   # rewrite run results
+├── scripts/                            # core scripts
+│   ├── ai_slop_dict.py                 # AI cliché blacklist dictionary
+│   ├── detect_ai_slop.py               # AI slop detection
+│   ├── docx_to_md.py                   # DOCX → Markdown conversion
+│   ├── extract_dna.py                  # DNA feature extraction
+│   ├── filter_non_prose.py             # non-prose content filter
+│   ├── generate_report.py              # rewrite comparison report
+│   ├── install_ai_tool_commands.py     # multi-tool auto-installer
+│   ├── md_to_docx.py                   # Markdown → DOCX conversion
+│   ├── render_dna_feature_cloud.py     # DNA feature cloud renderer
+│   ├── rewrite_with_dna.py             # DNA-driven rewrite engine
+│   ├── strip_template.py               # Layer 1 template stripper
+│   └── test_sample_sufficiency.py      # sample sufficiency diagnosis
+├── AI_INSTALL.md                       # AI tool install checklist
+├── CLAUDE.md                           # Claude Code project rules
+├── README.md                           # project readme (Chinese)
+├── README_EN.md                        # project readme (English, this file)
+├── SKILL.md                            # full skill workflow definition
+├── WRITING_DNA.md                      # cross-platform universal instructions
+├── config.yaml                         # runtime parameter config
+├── requirements.txt                    # Python dependency list
+└── run.py                              # one-click pipeline entrypoint
+```

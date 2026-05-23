@@ -8,10 +8,10 @@
 > **“帮我安装这个 writing-dna skill：https://github.com/dvdxfv/skill-writing-dna.git。安装后我要能用 `/writing-dna` 调用。”**
 
 ![安装过程](./docs/images/3cea31070b1b8d378f728da10cf6b9b8.png)
-*图 · 告诉 AI 工具安装链接后，它会自动完成克隆仓库、安装依赖，并把 Writing DNA 注册为可用 skill*
+*图1 · 告诉 AI 工具安装链接后，它会自动完成克隆仓库、安装依赖，并把 Writing DNA 注册为可用 skill*
 
 ![安装完成](./docs/images/c26597bc7d57f17b0fa6de7d76f8e9dc.png)
-*图 · 安装完成后，「写作 DNA」出现在你的技能列表中，随时可用*
+*图2 · 安装完成后，「写作 DNA」出现在你的技能列表中，随时可用*
 
 ### 给 AI 安装代理看的说明
 
@@ -50,7 +50,7 @@ AI 写稿有两个老大难问题：
 
 **关键设计**：Layer 1 完全文体无关——不预设"什么是公文模板"，同一作者不会自我抄袭，所以跨多篇字面重复必定是格式要求。Layer 2 处理 Layer 1 剥不掉的"结构相同但内容不同"的语义模板（如"指标主要考核"这种短句），交给 AI 在对话中判断。Layer 3 必须你拍板——语义级别的东西不能由算法或模型单独决定。
 
-全流程一共 **3 个必停的人工确认点**——模板剥留确认（🔵第2步）、DNA 画像确认（🔵第4步）、改写效果确认（🔵第7步）——因为风格这件事，每一层最后拍板的必须是你。
+全流程一共 **3 个必停的人工确认点**——模板剥留确认（🔵第3步）、DNA 画像确认（🔵第5步）、改写效果确认（🔵第8步）——因为风格这件事，每一层最后拍板的必须是你。
 
 ## 全流程总览
 
@@ -61,9 +61,9 @@ AI 写稿有两个老大难问题：
 ```
 
 **只有 3 个地方需要你停下来看：**
-- 🔵 **模板剥离后** — 确认 Layer 2 找出的语义模板要不要剥
-- 🔵 **提取完 DNA 后** — 确认画像准不准
-- 🔵 **改写完成后** — 确认效果好不好
+- 🔵 **模板剥离后（第3步）** — 确认 Layer 2 找出的语义模板要不要剥
+- 🔵 **提取完 DNA 后（第5步）** — 确认画像准不准
+- 🔵 **改写完成后（第8步）** — 确认效果好不好
 
 其余全部自动执行。
 
@@ -95,81 +95,225 @@ flowchart TD
 
 > 🔵 **流程图中蓝色菱形 = 必须人工判断的节点，模型不能替你做决定**
 
-<!-- 图1：AI味体检结果 -->
-![AI味体检结果](./docs/images/ai_slop_report.png)
-*图1 · AI 味体检：分数越高 AI 味越重，下方列明每项套话的命中位置*
+### 流程详解
 
-### 🔵 第4步：DNA 准确吗？—— 你必须亲自检查这 4 项
+整个过程分三段走，每段跑完都会停下来等你确认。你只需要做三件事：**放样本、确认 DNA、确认改写效果**，其余全自动。
 
-模型提取完 DNA 后**会自动停下来等你确认**，它会在对话里直接列出来给你看，不用去翻文件：
+#### 第一段：放样本 → 确认模板剥离（步骤 1 → 3）
 
-| # | 模型会给你看什么 | 怎么判断对不对 | 不对劲怎么办 |
-|:---:|:---|:---|:---|
-| 1 | 你最有代表性的写作特征（+ DNA 特征云） | 有没有"我从来没说过这个"？少了自己常用的表达？ | 告诉模型"XX 不是我说的，换成 YY" |
-| 2 | "你平均每句 XX 字，短句占 XX%" | 跟你平时的句子节奏像不像？你喜欢长句还是短句？ | 告诉模型"我一般 XX 字一句" |
-| 3 | "以下是判定为你从不用的 AI 套话" | 有没有把自己的口头禅误杀了？ | 指出误杀项 → 模型帮你从黑名单移除 |
-| 4 | "你的文章通常以……开头，以……结尾" | 跟你平时起手/收尾方式像不像？ | 复制你真实的开头/结尾发给模型替换 |
+把你过去写的文章（5-12篇，`.docx`/`.md`/`.txt` 都行）丢进项目里，然后运行一条命令就能启动。系统会自动完成三件事：把文档转成纯文本、去掉表格图片这类非正文内容、自动识别并剥离所有文章里反复出现的格式套话。
 
-**如果整体都不像** → 别急着重新提取，先跑样本测试：
-```bash
-python scripts/test_sample_sufficiency.py
-```
-测试会直接告诉你：是样本不够（补文档）、还是样本类型太单一（加不同类型的）、还是够了但提取规则要调。
+做完这些之后，系统会停下来——这是**第一个必停点（🔵第3步）**。
 
-<!-- 图2：DNA 特征云 -->
+它会给你看一份剥离报告，告诉你"这几处内容我在所有文章里都见到了，判断是格式要求不是你个人风格"。同时 AI 会再帮你检查一遍有没有漏掉的语义模板（比如论文的"摘要引言方法结果"结构、邮件的"此致敬礼"、公众号的"点赞关注转发"之类）。然后问你：这些要剥掉还是保留？
+
+你说"剥"就删、"留"就留。拍完板才能进入下一段。
+
+> 模板没确认好，后面提取的 DNA 就不准。所以这一步不能跳。
+
+#### 第二段：提取 DNA → 确认画像（步骤 4 → 5）
+
+模板确认无误后，系统从剥离后的纯净文本里提取你的写作 DNA——包括你最常用的短语、句子的长短习惯、开头结尾的方式、你从来不用的那些套话，还有你的 emoji 用法。全部统计完之后，AI 会结合这些数据画出一份你的"写作特征云"，然后**主动停下来等你核对**——这是**第二个必停点（🔵第5步）**。
+
+你需要逐项检查：
+
 ![DNA特征云](./docs/images/user_dna_hotwords_example.png)
-*图2 · DNA 特征云：字越大越能代表稳定写作资产，而不是普通词频统计*
+*图3 · DNA 特征云：字越大越能代表稳定写作资产，而不是普通词频统计*
 
----
-
-### 🔵 第7步：效果满意吗？—— 你必须亲自检查这 4 项
-
-模型改写完 + 生成对比报告后**会自动停下来等你确认**，它会在对话里直接展示给你看：
-
-| # | 模型会给你看什么 | 怎么判断对不对 | 不对劲怎么办 |
+| # | AI 给你看什么 | 怎么判断对不对 | 不对劲怎么办 |
 |:---:|:---|:---|:---|
-| 1 | 改写前后双栏对比 + "AI 味分数从 X 降到 Y，消除了 Z 个套话" | 读一遍改写稿，还有没有"赋能/重塑/综上所述"那股味道？ | 指出残留的句子 → 针对性重写 |
-| 2 | "植入了你的 N 个签名短语：XX、YY……" | 这些短语嵌进去自然吗？读起来像不像你在说话？ | 指出生硬的地方 → 调整后重跑 |
-| 3 | 原文 vs 改写稿的并行对比 | 原文的事实、数字、结论都还在吗？有没有遗漏或歪曲？ | 指出丢失的信息 → 补回 |
-| 4 | 完整的改写稿全文 | 整体读下来能不能直接发布/提交？还是还得自己改一轮？ | "还需微调" → 指出具体段落 → 定点修改 |
+| 1 | 最有代表性的写作特征（+ 上方特征云） | 有没有"我从来没说过这个"？少了自己常用的表达？ | 告诉模型"XX 不是我说的，换成 YY" |
+| 2 | "你平均每句 XX 字，短句占 XX%" | 跟平时的句子节奏像不像？喜欢长句还是短句？ | 告诉模型"我一般 XX 字一句" |
+| 3 | "判定为你从不用的 AI 套话"黑名单 | 有没有把自己的口头禅误杀了？ | 指出误杀项 → 模型帮你从黑名单移除 |
+| 4 | "你的文章通常以……开头，以……结尾" | 跟平时起手/收尾方式像不像？ | 复制真实开头/结尾发给模型替换 |
 
-**如果整体都不满意** → 别急着反复改写，按这个顺序排查：
-1. **DNA 准不准？** — 回看特征云和签名短语，第4步是不是草率确认的
-2. **样本够不够？** — `python scripts/test_sample_sufficiency.py`
-3. **换个模型试试** — 不同模型对风格改写的表现差异很大
+如果整体看着都不像你，别急着往下走。直接在对话里告诉 AI 哪里不对，它就能现场修正：
 
-<!-- 图3：改写前后对比 -->
+**常见情况和你该怎么说：**
+
+| 你看到的问题 | 你直接跟 AI 说 | AI 会怎么做 |
+|:---|:---|:---|
+| "这个特征云里的词我从来不用" | "XX 不是我说的，换成 YY" | 从签名短语里删掉 XX，补上 YY |
+| "句长统计跟我的习惯差很远" | "我一般写短句，每句大概 15-20 字" | 调整句长参数到你的真实范围 |
+| "黑名单把我的口头禅误杀了" | "XX 是我常用的口头禅，从黑名单移除" | 把 XX 移回白名单，不再清除 |
+| "开头结尾模式不对" | "我一般以……开头、以……结尾"（复制一段真实的发过去） | 用你的实际模式替换推断结果 |
+| **以上全都不像** | "整体都不对，帮我诊断一下样本够不够" | 跑诊断工具，告诉你缺什么 |
+
+> DNA 没确认好就改写，等于拿错误的配方做饭。所以这一步不能跳——但也不用怕说错，随时可以改。
+
+#### 第三段：放草稿 → 改写 → 确认效果 → 交付（步骤 6 → 9）
+
+DNA 确认保存后，以后每次拿到一篇 AI 写的草稿（不管哪个工具生成的），丢进来就行。系统会按你的 DNA 自动完成三件事：先把草稿里的 AI 套话清掉，再把你的写作习惯植进去，最后生成一份改写前后的对比报告。
+
+改完后**再次停下来**——这是**第三个也是最后一个必停点（🔵第8步）**。你需要逐项核对：
+
+![AI味体检结果](./docs/images/ai_slop_report.png)
+*图4 · AI 味体检（示例）：实际使用时 AI 会把这套数据直接在对话里展示给你看，不需要去翻文件*
+
+| # | AI 给你看什么 | 怎么判断对不对 | 不对劲怎么办 |
+|:---:|:---|:---|:---|
+| 1 | "AI 味分数从 X 降到 Y，消除了 Z 个套话"（上方体检报告） | 读一遍改写稿，还有没有"赋能/重塑/综上所述"？ | 指出残留句子 → 针对性重写 |
+| 2 | "植入了你的 N 个签名短语：XX、YY……" | 这些短语嵌进去自然吗？像你在说话吗？ | 指出生硬处 → 调整后重跑 |
+| 3 | 原文 vs 改写稿并行对比 | 事实、数字、结论都还在吗？有没有遗漏或歪曲？ | 指出丢失信息 → 补回 |
+| 4 | 完整的改写稿全文 | 整体能直接发布/提交？还是还得自己改一轮？ | "还需微调" → 指出具体段落 → 定点修改 |
+
 ![改写前后对比](./docs/images/comparison_report.png)
-*图3 · 改写前后对比：左原稿右改写，AI 味分数降了多少一目了然*
+*图5 · 改写前后对比（示例）：实际使用时 AI 会把原稿和改写稿并排展示在对话里，让你逐段对照检查*
 
-### ✅ 第8步：交付
+如果对改写效果不满意，按这个顺序排查：先回看第二段的 DNA 画像是不是确认得太草率 → 再查样本够不够 → 最后考虑换个 AI 模型试试。
 
-确认满意后，模型会自动交付 Markdown 成稿、对比报告和调试数据；如果你需要，还可以再转一份 DOCX：
+满意的话，你默认会拿到一个 **Markdown 成品文件**（`rewritten_draft.md`），可以直接用。如果需要 Word 版本，在对话里跟 AI 说一句**"转一份 DOCX"**或**"转一下 Word"**就行，它会自动生成带排版的 `.docx` 文件（自动配置黑体标题 + 仿宋正文），打开就能用。
 
-**默认你拿到的是 Markdown 版本**（`rewritten_draft.md`），适合直接在 Obsidian、Typora 等 Markdown 编辑器里使用。
+所有可能拿到的文件：
 
-**模型还会问你："要不要转一份 DOCX？"** 如果你用 WPS / Word，说"要"，它就自动帮你转成排版好的 `.docx` 文件——黑体标题 + 仿宋正文，打开直接就是正常的文档，不会像 MD 那样一粘贴全是 `#` `**` 乱码。
+| 文件 | 什么时候有 | 用途 |
+|:---|:---:|:---|
+| `rewritten_draft.md` | ✅ 默认就有 | 📝 改写后的成品 Markdown |
+| `report.md` | ✅ 默认就有 | 📊 改写前后对比报告 |
+| `rewritten_draft.docx` | 🔄 你说了才转 | 📄 WPS/Word 排版版 |
+| `rewrite_debug.json` | ✅ 默认就有 | 🔧 详细指标数据（一般不用管） |
 
-所有交付物都在 `outputs/rewrite_runs/` 下：
-
-| 文件 | 什么场景用 |
-|:---|:---|
-| `report.md` | 📊 改写前后对比报告，读一遍确认质量 |
-| `rewritten_draft.md` | 📝 改写后的成品 Markdown |
-| `rewritten_draft.docx` | 📄 WPS/Word 直接打开，排版好的版本（选转） |
-| `rewrite_debug.json` | 🔧 详细指标数据（一般不用管） |
-
-<!-- 图4：MD 直接复制到 WPS 乱码 vs DOCX 转换后排版效果 -->
-
-*图4 · MD 乱码 vs DOCX 转换：左边 Markdown 直接粘贴到 WPS 不可读，右边自动转出的排版文档整洁如初*
+*图6 · MD 乱码 vs DOCX 转换：左边 Markdown 直接粘贴到 WPS 不可读，右边自动转出的排版文档整洁如初*
 
 | MD 直接粘贴到 WPS | DOCX 转换后 |
 |:---:|:---:|
 | ![MD 乱码](./docs/images/md_raw_wps_garbled.png) | ![DOCX 排版效果](./docs/images/wps_docx_effect.png) |
 
+> 改写没确认就交付，等于没做过风格化。三个确认点，一个都不能省。
+
 ---
 
+## 效果不好怎么办？
+
+DNA 画像不准？改写后不像你写的？**按顺序排查，不要盲目加样本或换模型。**
+
+---
+
+### 排查总览
+
+```
+问题出现
+   ↓
+① 跑样本充足性测试 ──→ 样本不够？ ──→ 补样本（不同类型）→ 重新提取
+   ↓ 够
+② 跑模板画像检查 ──→ 剥离有问题？ ──→ 调 strip_template 规则 → 重新剥离+提取
+   ↓ 没问题
+③ 检查 DNA 规则 ──→ 规则不对？ ──→ 手动调整 DNA JSON → 重新改写
+   ↓ 没问题
+④ 换模型 / 调参数 ──→ 重跑改写
+```
+
+---
+
+<a id="样本充足性测试"></a>
+
+### ① 样本充足性测试
+
+> 📖 **延伸阅读**：样本数量与类型的详细建议，见下方 [关于样本](#关于样本) 章节。
+
+**症状：** DNA 提取的特征很少、很泛，或者你觉得"这不像我"
+
+```bash
+python scripts/test_sample_sufficiency.py
+```
+
+报告输出到 `outputs/debug/sample_sufficiency_test.md`，看这两个指标：
+
+| 指标 | ✅ 正常 | ⚠️ 需关注 | ❌ 有问题 |
+|:---|:---|:---|:---|
+| **留一法波动值** | < 0.05 | 0.05 ~ 0.15 | > 0.15 |
+| **饱和度曲线** | 已趋于平缓 | 接近平缓 | 仍在上升 |
+
+**根据结果操作：**
+
+- **❌ 波动大 + 曲线未饱和** → 样本量不够，补 **2-3 篇不同类型**的文档，然后重新 `run.py extract`
+- **⚠️ 波动中等 + 曲线趋平** → 基本可用，但某些特征不稳定。先继续往下排查第②步
+- **✅ 波动小 + 曲线已饱和** → 样本没问题，问题在别处，直接看第②步
+
+---
+
+### ② 模板剥离检查
+
+**症状：** DNA 里混入大量套话/格式化内容，或者提取出的特征太少
+
+模板剥离脚本 `scripts/strip_template.py` 在 `run.py pipeline` 时已自动跑过一次，并生成了 `outputs/template_profiles/strip_report.md`。打开它检查：
+
+```bash
+# 如想换阈值重跑（默认 60%）：
+python scripts/strip_template.py --input inputs/filtered_markdown --output-dir inputs/template_stripped_markdown --doc-ratio-threshold 0.6 --report outputs/template_profiles/strip_report.md
+```
+
+查看 `strip_report.md` 中的三段（重复章节标题 / 字面整句重复 / ≥8 字高频长短语）：
+
+| 现象 | 含义 | 怎么办 |
+|:---|:---|:---|
+| 报告把你的**个人风格短语**也当成模板剥了 | 阈值太宽 → 误杀 | 把 `--doc-ratio-threshold` 调高（如 `0.8` 表示需要 8/10 篇都出现才算模板） |
+| 报告漏了明显模板（每篇都有但没抓到） | 阈值太严或 ngram 起点太长 | 调低阈值（如 `0.5`）或缩短 `--min-ngram` |
+| 报告基本对，但还有"结构相同但内容不同"的模板留下 | Layer 1 处理不了语义模板（这是设计预期） | 这是 Layer 2 的工作——由 LLM 在对话里识别并和你确认（见 [SKILL.md](SKILL.md) Step 1.5b/c） |
+
+> 💡 PRD §8.1.3 把模板剥离设计为三层：Layer 1 是这个脚本做的"跨文档字面对齐"；Layer 2 是 LLM 在对话里做的"语义模板识别"；Layer 3 是你确认。脚本只负责前者，不要期待它识别所有文体的语义模板。
+
+---
+
+### ③ DNA 规则检查
+
+**症状：** 样本和模板都没问题，但改写后的文章还是不像你的风格
+
+打开 `outputs/dna_profiles/<你的名字>-dna.json`，逐条检查：
+
+| 检查项 | 问题表现 | 调整方式 |
+|:---|:---|:---|
+| **句长分布** | 改写后句子忽长忽短 | 检查 `sentence_length` 区间是否与原文匹配 |
+| **连接词偏好** | 出现你不常用的连接词 | 检查 `connectors` 黑名单/白名单是否完整 |
+| **签名短语** | 没有植入或植入位置生硬 | 检查 `signature_phrases` 是否有足够的示例句 |
+| **制度词/高频词** | 用词风格偏差大 | 检查 `vocabulary_preferences` 词表是否准确 |
+
+手动编辑 DNA JSON 后，重新运行：
+
+```bash
+python run.py rewrite
+```
+
+---
+
+### ④ 模型与参数调优
+
+> 📖 **延伸阅读**：不同模型在改写任务上的表现差异很大，详见下方 [关于模型](#关于模型) 的跨模型 Benchmark 实测结果。
+
+**症状：** 以上三步都确认没问题，但改写质量仍不满意
+
+按以下优先级尝试：
+
+1. **换模型** — 不同模型对改写规则的遵循度差异很大：
+   - Claude：规则遵循最严格
+   - ChatGPT：信息保留最好
+   - DeepSeek：性价比最高
+
+2. **调参数** — 编辑 `config.yaml`：
+   - `rewrite_aggressiveness`: 降低 = 更保守（更像原文），提高 = 更激进（更像你的风格）
+   - `signature_density`: 签名短语植入密度
+
+3. **检查输入稿** — 确保 AI 草稿本身信息完整，没有缺失段落
+
+---
+
+### 快速定位对照表
+
+| 你遇到的问题 | 最可能的原因 | 先跑哪个测试 |
+|:---|:---|:---|
+| DNA 特征很少、很空泛 | 样本量不够 或 类型太单一 | ① 样本充足性测试 |
+| DNA 里有很多套话/格式语 | 模板没剥干净 | ② 模板画像检查 |
+| DNA 提取了但改写后不像 | DNA 规则需要微调 | ③ DNA 规则检查 |
+| 改写后信息丢失严重 | 模型太激进 | ④ 换保守模型 |
+| 改写后风格变化太小 | 模型太保守 或 参数太低 | ④ 提高激进度/换模型 |
+
+---
+
+<a id="关于样本"></a>
+
 ## 关于样本
+
+> 📖 **延伸阅读**：样本够不够、质量好不好，直接影响 DNA 提取效果。遇到问题时先跑 [样本充足性测试](#样本充足性测试) 诊断一下。
 
 ### 样本数量建议
 
@@ -231,6 +375,8 @@ python scripts/test_sample_sufficiency.py
 | 文件夹 | 自动扫描所有 `.docx` / `.md` / `.txt` |
 
 ---
+
+<a id="关于模型"></a>
 
 ## 关于模型
 
@@ -356,126 +502,6 @@ DeepSeek V4 Pro 在此次改写任务中明显区别于前四个保守模型，�
 
 ---
 
-## 效果不好怎么办？
-
-DNA 画像不准？改写后不像你写的？**按顺序排查，不要盲目加样本或换模型。**
-
----
-
-### 排查总览
-
-```
-问题出现
-   ↓
-① 跑样本充足性测试 ──→ 样本不够？ ──→ 补样本（不同类型）→ 重新提取
-   ↓ 够
-② 跑模板画像检查 ──→ 剥离有问题？ ──→ 调 strip_template 规则 → 重新剥离+提取
-   ↓ 没问题
-③ 检查 DNA 规则 ──→ 规则不对？ ──→ 手动调整 DNA JSON → 重新改写
-   ↓ 没问题
-④ 换模型 / 调参数 ──→ 重跑改写
-```
-
----
-
-### ① 样本充足性测试
-
-**症状：** DNA 提取的特征很少、很泛，或者你觉得"这不像我"
-
-```bash
-python scripts/test_sample_sufficiency.py
-```
-
-报告输出到 `outputs/debug/sample_sufficiency_test.md`，看这两个指标：
-
-| 指标 | ✅ 正常 | ⚠️ 需关注 | ❌ 有问题 |
-|:---|:---|:---|:---|
-| **留一法波动值** | < 0.05 | 0.05 ~ 0.15 | > 0.15 |
-| **饱和度曲线** | 已趋于平缓 | 接近平缓 | 仍在上升 |
-
-**根据结果操作：**
-
-- **❌ 波动大 + 曲线未饱和** → 样本量不够，补 **2-3 篇不同类型**的文档，然后重新 `run.py extract`
-- **⚠️ 波动中等 + 曲线趋平** → 基本可用，但某些特征不稳定。先继续往下排查第②步
-- **✅ 波动小 + 曲线已饱和** → 样本没问题，问题在别处，直接看第②步
-
----
-
-### ② 模板剥离检查
-
-**症状：** DNA 里混入大量套话/格式化内容，或者提取出的特征太少
-
-模板剥离脚本 `scripts/strip_template.py` 在 `run.py pipeline` 时已自动跑过一次，并生成了 `outputs/template_profiles/strip_report.md`。打开它检查：
-
-```bash
-# 如想换阈值重跑（默认 60%）：
-python scripts/strip_template.py --input inputs/filtered_markdown --output-dir inputs/template_stripped_markdown --doc-ratio-threshold 0.6 --report outputs/template_profiles/strip_report.md
-```
-
-查看 `strip_report.md` 中的三段（重复章节标题 / 字面整句重复 / ≥8 字高频长短语）：
-
-| 现象 | 含义 | 怎么办 |
-|:---|:---|:---|
-| 报告把你的**个人风格短语**也当成模板剥了 | 阈值太宽 → 误杀 | 把 `--doc-ratio-threshold` 调高（如 `0.8` 表示需要 8/10 篇都出现才算模板） |
-| 报告漏了明显模板（每篇都有但没抓到） | 阈值太严或 ngram 起点太长 | 调低阈值（如 `0.5`）或缩短 `--min-ngram` |
-| 报告基本对，但还有"结构相同但内容不同"的模板留下 | Layer 1 处理不了语义模板（这是设计预期） | 这是 Layer 2 的工作——由 LLM 在对话里识别并和你确认（见 [SKILL.md](SKILL.md) Step 1.5b/c） |
-
-> 💡 PRD §8.1.3 把模板剥离设计为三层：Layer 1 是这个脚本做的"跨文档字面对齐"；Layer 2 是 LLM 在对话里做的"语义模板识别"；Layer 3 是你确认。脚本只负责前者，不要期待它识别所有文体的语义模板。
-
----
-
-### ③ DNA 规则检查
-
-**症状：** 样本和模板都没问题，但改写后的文章还是不像你的风格
-
-打开 `outputs/dna_profiles/<你的名字>-dna.json`，逐条检查：
-
-| 检查项 | 问题表现 | 调整方式 |
-|:---|:---|:---|
-| **句长分布** | 改写后句子忽长忽短 | 检查 `sentence_length` 区间是否与原文匹配 |
-| **连接词偏好** | 出现你不常用的连接词 | 检查 `connectors` 黑名单/白名单是否完整 |
-| **签名短语** | 没有植入或植入位置生硬 | 检查 `signature_phrases` 是否有足够的示例句 |
-| **制度词/高频词** | 用词风格偏差大 | 检查 `vocabulary_preferences` 词表是否准确 |
-
-手动编辑 DNA JSON 后，重新运行：
-
-```bash
-python run.py rewrite
-```
-
----
-
-### ④ 模型与参数调优
-
-**症状：** 以上三步都确认没问题，但改写质量仍不满意
-
-按以下优先级尝试：
-
-1. **换模型** — 不同模型对改写规则的遵循度差异很大：
-   - Claude：规则遵循最严格
-   - ChatGPT：信息保留最好
-   - DeepSeek：性价比最高
-
-2. **调参数** — 编辑 `config.yaml`：
-   - `rewrite_aggressiveness`: 降低 = 更保守（更像原文），提高 = 更激进（更像你的风格）
-   - `signature_density`: 签名短语植入密度
-
-3. **检查输入稿** — 确保 AI 草稿本身信息完整，没有缺失段落
-
----
-
-### 快速定位对照表
-
-| 你遇到的问题 | 最可能的原因 | 先跑哪个测试 |
-|:---|:---|:---|
-| DNA 特征很少、很空泛 | 样本量不够 或 类型太单一 | ① 样本充足性测试 |
-| DNA 里有很多套话/格式语 | 模板没剥干净 | ② 模板画像检查 |
-| DNA 提取了但改写后不像 | DNA 规则需要微调 | ③ DNA 规则检查 |
-| 改写后信息丢失严重 | 模型太激进 | ④ 换保守模型 |
-| 改写后风格变化太小 | 模型太保守 或 参数太低 | ④ 提高激进度/换模型 |
-
----
-
 ## 能力边界
 
 这个工具改的是**"怎么写"**，不改**"写了什么结构"**。以下限制请提前了解，避免不切实际的期望：
@@ -502,165 +528,85 @@ DOCX 由 `scripts/md_to_docx.py` 生成（依赖 pandoc），自动配置黑体�
 
 ---
 
-## 快速上手
+## 仓库结构
 
-> **支持的 AI 编程工具：** Trae / Cursor / Claude Code / VS Code Copilot / CodeX — 项目的 `WRITING_DNA.md` 已同步到各平台的规则目录（`.cursor/rules/`、`.claude/`、`.github/`、`.codex/rules/`），Python 脚本通用。打开项目即生效。
->
-> **两种使用方式：** 推荐在 Trae / Cursor 等工具中**对话式使用**（直接说话，AI 自动执行脚本）；也可以**命令行使用**（手动跑 Python 脚本）。
-
-### 方式一：对话式使用（推荐）
-
-在 Trae / Cursor / Claude Code 等工具中打开项目文件夹，直接说话即可：
-
-**提取 DNA：**
 ```
-帮我把 inputs/raw_docx_articles/ 里的文章提取写作 DNA，用户名叫「你的名字」
-```
-AI 自动完成预处理 + DNA 提取，然后在对话中展示确认清单——你只需要回复"准，继续"或指出需要修正的项。
-
-**改写 AI 草稿：**
-```
-用我的 DNA 改写 inputs/ai_drafts/我的草稿.md，去掉 AI 味
-```
-AI 自动执行 AI 味体检 → 逐段改写 → 生成对比报告，然后等你确认效果。
-
-**加参数：**
-```
-用我的 DNA 改写，保守一点，不要改太猛
-用我的 DNA 改写，发布场景是小红书
-用我的 DNA 改写，换个模型，用 Claude
-帮我跑一下样本充足性测试
-帮我把改写稿转成 DOCX
-```
-
-**核心理念：** 全程在对话中完成，中间有三个必须你亲自确认的停等点（模板剥留？DNA 准不准？改写效果好不好？），其余自动执行。
-
----
-
-### 方式二：命令行使用
-
-#### 第一步：安装
-
-```bash
-# 克隆项目
-git clone <项目地址>
-cd skill项目
-
-# 安装依赖（Python 3.10+）
-pip install -r requirements.txt
-# 如需导出 DOCX，还需安装 pandoc（非 Python 包，需单独下载）
-# Windows: https://github.com/jgm/pandoc/releases/latest
-# macOS: brew install pandoc
-```
-
-> **依赖说明**：`mammoth` 用于 DOCX→Markdown 转换，`markdownify` 用于 HTML→Markdown，`matplotlib` + `Pillow` 用于生成 DNA 特征云图，`PyYAML` 读取配置文件。**pandoc** 是 `md_to_docx.py` 的依赖（用于 Markdown→DOCX 转换），不是 pip 包，需要从 [pandoc 官网](https://pandoc.org/installing.html) 单独下载安装。不装 pandoc 不影响核心功能（DNA 提取、改写），只是无法生成 `.docx` 文件。
-
-#### 第二步：放入样本
-
-将你的 **5-8 篇过往作品**放入 `inputs/raw_docx_articles/`，支持 `.docx` / `.md` / `.txt`。
-
-#### 第三步：一键运行
-
-```bash
-# 查看当前状态和下一步建议
-python run.py status
-
-# 运行前置处理全链路（转换 → 过滤 → 模板剥离）
-python run.py pipeline
-
-# 提取DNA
-python run.py extract --user-name 你的名字
-
-# 放入AI草稿到 inputs/ai_drafts/ 后改写
-python run.py rewrite
-```
-
-#### 第四步：查看产出
-
-| 产出 | 路径 |
-|:---|:---|
-| DNA画像（JSON） | `outputs/dna_profiles/<你的名字>-dna.json` |
-| DNA特征云（PNG） | `outputs/dna_profiles/<你的名字>-dna_hotwords.png`（统计签名短语词云）或 `<你的名字>-dna_feature_cloud.png`（正式语义特征云） |
-| 改写成品稿 | `outputs/rewrite_runs/rewritten_draft.md` |
-| 改写对比报告 | `outputs/rewrite_runs/report.md` |
-| 改写调试信息 | `outputs/rewrite_runs/rewrite_debug.json` |
-| DOCX交付版（可选） | `outputs/rewrite_runs/rewritten_draft.docx` |
-
-### 高级用法：逐脚本调用
-
-如果需要更精细的控制，也可以单独调用每个脚本：
-
-```bash
-# 前置处理链路
-python scripts/docx_to_md.py --input inputs/raw_docx_articles/*.docx --output-dir inputs/normalized_markdown
-python scripts/filter_non_prose.py --input inputs/normalized_markdown/*.md --output-dir inputs/filtered_markdown
-python scripts/strip_template.py --input inputs/filtered_markdown/*.md --output-dir inputs/template_stripped_markdown
-
-# 样本充足性诊断（可选，建议5篇以上运行）
-python scripts/test_sample_sufficiency.py
-
-# DNA提取
-python scripts/extract_dna.py --input inputs/template_stripped_markdown/*.md --user-name 你的名字 --output outputs/dna_profiles/你的名字-dna.json
-
-# DNA特征云可视化
-python scripts/render_dna_feature_cloud.py
-
-# AI味检测（可选）
-python scripts/detect_ai_slop.py --text inputs/ai_drafts/你的草稿.md --dna outputs/dna_profiles/你的名字-dna.json
-
-# 按DNA改写
-python scripts/rewrite_with_dna.py --draft inputs/ai_drafts/你的草稿.md --dna outputs/dna_profiles/你的名字-dna.json --output-md outputs/rewrite_runs/rewritten_draft.md --output-json outputs/rewrite_runs/rewrite_debug.json
-
-# 生成对比报告
-python scripts/generate_report.py --original inputs/ai_drafts/你的草稿.md --rewritten outputs/rewrite_runs/rewritten_draft.md --dna outputs/dna_profiles/你的名字-dna.json --debug-json outputs/rewrite_runs/rewrite_debug.json --output-md outputs/rewrite_runs/report.md
+writing-dna/
+├── .claude/                            # Claude Code 注册入口
+│   ├── commands/
+│   │   └── writing-dna.md              # slash command 定义
+│   └── writing-dna.md                  # skill 入口
+├── .codex/                             # CodeX 注册入口
+│   ├── prompts/
+│   │   └── writing-dna.md              # prompt 定义
+│   └── rules/
+│       └── writing-dna.md              # 规则定义
+├── .cursor/                            # Cursor 注册入口
+│   ├── commands/
+│   │   └── writing-dna.md              # slash command 定义
+│   └── rules/
+│       └── writing-dna.md              # 规则定义
+├── .github/
+│   └── copilot-instructions.md         # GitHub Copilot 指令
+├── .trae/                              # Trae / SOLO 注册入口
+│   ├── commands/
+│   │   └── writing-dna.md              # slash command 定义
+│   └── skills/
+│       └── writing-dna/
+│           └── SKILL.md                # skill 完整流程定义
+├── docs/                               # 文档与图片资源
+│   ├── images/                         # README 配图
+│   │   ├── 3cea31070b1b8d378f728da10cf6b9b8.png  # 安装过程截图
+│   │   ├── ai_slop_report.png          # AI 味体检报告
+│   │   ├── c26597bc7d57f17b0fa6de7d76f8e9dc.png  # 安装完成截图
+│   │   ├── comparison_report.png       # 改写前后对比
+│   │   ├── md_raw_wps_garbled.png      # MD 粘贴到 WPS 乱码
+│   │   ├── model_benchmark_example.png # 模型评测示例
+│   │   ├── user_dna_hotwords_example.png # DNA 特征云
+│   │   └── wps_docx_effect.png         # DOCX 排版效果
+│   ├── writing-dna-architecture.md     # 系统架构说明
+│   └── writing-dna-module-map.md       # 模块关系图
+├── examples/                           # 改写示例（输入输出对照）
+│   ├── 01-chatgpt-xiashentan.md        # ChatGPT 改写：瞎神探
+│   ├── 02-notion-ai-zhibuzhi.md        # Notion AI 改写：知不知
+│   ├── 03-cursor-diqitian.md           # Cursor 改写：第七天
+│   ├── 04-obsidian-xiezai.md           # Obsidian 改写：写在
+│   ├── 05-ai-pm-bietuile.md            # AI PM 改写：别推了
+│   └── ai_slop_input.md                # AI 味检测输入示例
+├── inputs/                             # 用户样本存放（运行时目录）
+│   ├── README.md                       # 使用说明
+│   ├── filtered_markdown/              # 过滤后的纯文本
+│   ├── normalized_markdown/            # 标准化后的文本
+│   └── template_stripped_markdown/     # 剥离模板后的文本
+├── outputs/                            # 运行输出（运行时目录）
+│   ├── README.md                       # 使用说明
+│   ├── debug/                          # 调试诊断报告
+│   ├── dna_profiles/                   # DNA 画像文件
+│   └── rewrite_runs/                   # 改写运行结果
+├── scripts/                            # 核心脚本
+│   ├── ai_slop_dict.py                 # AI 套话黑名单词典
+│   ├── detect_ai_slop.py               # AI 味检测
+│   ├── docx_to_md.py                   # DOCX → Markdown 转换
+│   ├── extract_dna.py                  # DNA 特征提取
+│   ├── filter_non_prose.py             # 非正文内容过滤
+│   ├── generate_report.py              # 改写对比报告生成
+│   ├── install_ai_tool_commands.py     # 多工具自动安装器
+│   ├── md_to_docx.py                   # Markdown → DOCX 转换
+│   ├── render_dna_feature_cloud.py     # DNA 特征云渲染
+│   ├── rewrite_with_dna.py             # 按 DNA 画像改写
+│   ├── strip_template.py               # Layer1 模板剥离
+│   └── test_sample_sufficiency.py      # 样本充足性诊断
+├── AI_INSTALL.md                       # AI 工具安装清单
+├── CLAUDE.md                           # Claude Code 项目规则
+├── README.md                           # 项目说明（本文件）
+├── README_EN.md                        # 英文说明
+├── SKILL.md                            # Skill 完整流程定义
+├── WRITING_DNA.md                      # 跨平台通用指令
+├── config.yaml                         # 运行参数配置
+├── requirements.txt                    # Python 依赖清单
+└── run.py                              # 全流程一键入口
 ```
 
 ---
 
-## 项目结构速查
 
-```
-├── inputs/
-│   ├── raw_docx_articles/      ← 你的原始 DOCX
-│   ├── normalized_markdown/    ← DOCX 转换后的 Markdown
-│   ├── filtered_markdown/      ← 非正文过滤后
-│   ├── template_stripped_markdown/ ← 模板剥离后（DNA 提取输入）
-│   └── ai_drafts/              ← AI 草稿（用于改写对比）
-│
-├── outputs/
-│   ├── dna_profiles/           ← DNA 主输出 + 特征云
-│   ├── rewrite_runs/           ← 改写结果 + 说明
-│   └── debug/                  ← 测试报告（饱和度/留一法）
-│
-├── scripts/                    ← 处理脚本
-├── docs/                       ← 项目设计文档
-├── .cursor/rules/              ← Cursor 规则（自动加载）
-├── .claude/                    ← Claude Code 指令
-├── .github/                    ← VS Code Copilot 指令
-├── .codex/rules/               ← CodeX 规则
-├── SKILL.md                    ← 完整 skill 流程说明（Trae 原生格式）
-└── WRITING_DNA.md              ← 跨平台通用指令（去掉 Trae 头部）
-
----
-
-## 推荐阅读
-
-- [SKILL.md](SKILL.md) — 完整 skill 流程定义（Trae 原生格式）
-- [WRITING_DNA.md](WRITING_DNA.md) — 跨平台通用指令（Cursor / Claude Code / VS Code / CodeX 共用）
-- [PROJECT_STATUS.md](PROJECT_STATUS.md) — 项目进度、资源消耗、未完项
-- [docs/writing-dna-architecture.md](docs/writing-dna-architecture.md) — 系统架构说明
-
----
-
-## 截图文件说明
-
-文中含 4 张图片，均位于 `docs/images/`：
-
-| 图号 | 图片文件 | 所在章节 |
-|:---:|:---|:---|
-| 图1 | `ai_slop_report.png` | 流程图下方 · AI 味体检结果 |
-| 图2 | `user_dna_hotwords_example.png` | 第4步 DNA 确认后 · DNA 特征云 |
-| 图3 | `comparison_report.png` | 第7步 效果确认后 · 改写前后对比 |
-| 图4 | `md_raw_wps_garbled.png` + `wps_docx_effect.png` | 第8步 交付 · MD 乱码 vs DOCX 排版 |
-
-图片放入 `docs/images/` 后，GitHub 会自动渲染。<
