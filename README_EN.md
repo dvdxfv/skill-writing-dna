@@ -37,7 +37,7 @@ See [AI_INSTALL.md](AI_INSTALL.md) for the full install checklist. Its installer
 
 ## Changelog
 
-### 2026-05
+### 2026-05-24
 
 Added:
 
