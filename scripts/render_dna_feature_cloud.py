@@ -77,41 +77,57 @@ def normalize_label(text: str) -> str | None:
     return None
 
 
-def add_feature(store: dict[str, float], raw_text: str, weight: float) -> None:
+def collect_blocked_labels(profile: dict[str, Any]) -> set[str]:
+    blocked: set[str] = set()
+    for raw in profile.get("excluded_as_template", []):
+        label = normalize_label(str(raw))
+        if label:
+            blocked.add(label)
+    downgraded = profile.get("downgraded_features", {})
+    if isinstance(downgraded, dict):
+        downgraded_items = list(downgraded.keys()) + list(downgraded.values())
+    elif isinstance(downgraded, list):
+        downgraded_items = downgraded
+    else:
+        downgraded_items = []
+    for raw in downgraded_items:
+        label = normalize_label(str(raw))
+        if label:
+            blocked.add(label)
+    return blocked
+
+
+def add_feature(store: dict[str, float], raw_text: str, weight: float, blocked: set[str] | None = None) -> None:
     label = normalize_label(raw_text)
-    if label:
+    if label and label not in (blocked or set()):
         store[label] += weight
 
 
 def collect_feature_weights(profile: dict[str, Any]) -> list[tuple[str, float]]:
     weights: dict[str, float] = defaultdict(float)
+    blocked = collect_blocked_labels(profile)
 
-    add_feature(weights, str(profile.get("overall_assessment", "")), 1.8)
+    add_feature(weights, str(profile.get("overall_assessment", "")), 1.8, blocked)
 
     for value in profile.get("structure_habits", {}).values():
-        add_feature(weights, str(value), 1.6)
+        add_feature(weights, str(value), 1.6, blocked)
 
     for value in profile.get("argumentation_style", {}).values():
-        add_feature(weights, str(value), 1.5)
+        add_feature(weights, str(value), 1.5, blocked)
 
     language_features = profile.get("language_features", {})
     for value in language_features.values():
         if isinstance(value, dict):
             for nested in value.values():
                 if isinstance(nested, list):
-                    add_feature(weights, " / ".join(str(x) for x in nested), 1.1)
+                    add_feature(weights, " / ".join(str(x) for x in nested), 1.1, blocked)
                 else:
-                    add_feature(weights, str(nested), 1.1)
+                    add_feature(weights, str(nested), 1.1, blocked)
         else:
-            add_feature(weights, str(value), 1.1)
+            add_feature(weights, str(value), 1.1, blocked)
 
     for rule in profile.get("rewrite_rules", []):
-        add_feature(weights, str(rule), 1.9)
-
-    if "transition_mode" in profile.get("structure_habits", {}):
-        weights["一是…二是…三是…"] += 1.0
-    if "within_section" in profile.get("structure_habits", {}):
-        weights["先判断后展开"] += 1.0
+        add_feature(weights, str(rule), 1.9, blocked)
 
     features = sorted(weights.items(), key=lambda item: item[1], reverse=True)
     return features[:12]

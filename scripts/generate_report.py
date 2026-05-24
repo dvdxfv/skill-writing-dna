@@ -66,7 +66,13 @@ def build_report(original: str, rewritten: str, dna: dict, debug: dict) -> str:
     if removed_bl:
         lines.append("### 清除的黑名单词\n")
         for item in removed_bl[:20]:
-            lines.append(f"- **{item['phrase']}** (出现{item['removed_count']}次)")
+            action = item.get("action", "deleted")
+            if action == "replaced":
+                lines.append(f"- **{item['phrase']}** (出现{item['removed_count']}次) → `{item.get('replacement', '')}`")
+            elif action == "deferred":
+                lines.append(f"- **{item['phrase']}** (出现{item['removed_count']}次) → 需语义改写，未机械删除")
+            else:
+                lines.append(f"- **{item['phrase']}** (出现{item['removed_count']}次)")
         lines.append("")
 
     if removed_conn:
@@ -89,16 +95,22 @@ def build_report(original: str, rewritten: str, dna: dict, debug: dict) -> str:
 
     downgraded = skipped.get("downgraded", [])
     not_applied = skipped.get("not_applied", [])
-    if downgraded or not_applied:
-        lines.append("## ⏭️ 跳过的规则\n")
+    applied_uncertain = skipped.get("applied_uncertain_candidates", [])
+    if downgraded or not_applied or applied_uncertain:
+        lines.append("## ⏭️ 跳过的规则 / 未应用 / 降权说明\n")
         if downgraded:
-            lines.append("**降级特征（不稳定，未作为改写规则）:**\n")
+            lines.append("**降级特征（不稳定，仅作参考，不等同于本次规则没应用）:**\n")
             for d in downgraded:
                 lines.append(f"- {d}")
             lines.append("")
         if not_applied:
-            lines.append("**不确定候选（样本不足，暂不应用）:**\n")
+            lines.append("**本次未应用的不确定候选（样本不足或不适合当前语境）:**\n")
             for n in not_applied:
+                lines.append(f"- {n}")
+            lines.append("")
+        if applied_uncertain:
+            lines.append("**已命中但仍需人工确认的候选:**\n")
+            for n in applied_uncertain:
                 lines.append(f"- {n}")
             lines.append("")
 

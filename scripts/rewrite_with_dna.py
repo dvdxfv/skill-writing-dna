@@ -3,6 +3,12 @@
 Rewrite a draft using a DNA profile and optional template profile.
 
 读取DNA画像 → 检测AI套话 → 按个人风格规则改写 → 输出改写稿+调试信息
+
+改写优先级（与 SKILL.md「改写规则（按优先级）」一致；多目标冲突时序号靠前者优先）：
+  1. 信息无损  2. 黑名单硬清除  3. 签名短语自然植入  4. 句长/节奏对齐
+本脚本是确定性辅助工具：执行顺序固定为 黑名单清除 → 连接词替换 → 签名植入 → 开头调整，
+已先清黑名单后植签名，符合上述优先级；不要为植入签名而反序破坏信息。真正的语义级改写
+由对话中的 LLM 按上述优先级完成。
 """
 
 import argparse
@@ -32,6 +38,36 @@ except ImportError:
     ALL_SLOP = {}
     def detect_slop(text):
         return {"hits": [], "score": 0}
+
+
+BLACKLIST_SAFE_REPLACEMENTS = {
+    "在数字化转型的浪潮中": "当前",
+    "在数字化转型的大背景下": "当前",
+    "数字化转型": "数字技术应用",
+    "顶层设计": "统筹安排",
+    "多元化": "多样",
+    "多维度": "多角度",
+    "构建": "建设",
+    "赋能": "支持",
+    "重塑": "调整",
+    "生态": "体系",
+    "卓越的": "较好的",
+    "完善的": "较完整的",
+    "一站式": "系统性",
+    "综上所述": "总体来看",
+    "总而言之": "整体来看",
+}
+
+BLACKLIST_SAFE_DELETIONS = {
+    "首先",
+    "其次",
+    "再次",
+    "最后",
+    "首先，",
+    "其次，",
+    "再次，",
+    "最后，",
+}
 
 
 def load_json(path: str) -> dict:
@@ -104,14 +140,50 @@ def detect_ai_slop_in_text(text: str, blacklist: list[str]) -> dict[str, Any]:
     }
 
 
+def cleanup_punctuation(text: str) -> str:
+    """Clean punctuation scars left by deterministic phrase replacement."""
+    text = re.sub(r"^[，,、；;：:\s]+", "", text, flags=re.MULTILINE)
+    text = re.sub(r"([。！？；;])\s*[，,、；;：:]+", r"\1", text)
+    text = re.sub(r"[，,、；;：:]{2,}", "，", text)
+    text = re.sub(r"，[、，]+", "，", text)
+    text = re.sub(r"，。", "。", text)
+    text = re.sub(r"，([。！？])", r"\1", text)
+    text = re.sub(r"\s+([，。！？；：])", r"\1", text)
+    return text.strip()
+
+
+def _safe_delete_phrase(text: str, phrase: str) -> tuple[str, bool]:
+    pattern = re.compile(rf"(?<!\w){re.escape(phrase)}[，,、]?", re.MULTILINE)
+    new_text = pattern.sub("", text)
+    return cleanup_punctuation(new_text), new_text != text
+
+
 def apply_blacklist_removal(text: str, blacklist: list[str]) -> tuple[str, list[dict]]:
     removed = []
     for phrase in sorted(blacklist, key=len, reverse=True):
         count = text.count(phrase)
         if count > 0:
-            text = text.replace(phrase, "")
-            removed.append({"phrase": phrase, "removed_count": count})
-    return text, removed
+            if phrase in BLACKLIST_SAFE_REPLACEMENTS:
+                replacement = BLACKLIST_SAFE_REPLACEMENTS[phrase]
+                text = text.replace(phrase, replacement)
+                removed.append({
+                    "phrase": phrase,
+                    "removed_count": count,
+                    "action": "replaced",
+                    "replacement": replacement,
+                })
+            elif phrase in BLACKLIST_SAFE_DELETIONS:
+                text, changed = _safe_delete_phrase(text, phrase)
+                if changed:
+                    removed.append({"phrase": phrase, "removed_count": count, "action": "deleted"})
+            else:
+                removed.append({
+                    "phrase": phrase,
+                    "removed_count": count,
+                    "action": "deferred",
+                    "reason": "需要语义改写，确定性删除可能破坏句子",
+                })
+    return cleanup_punctuation(text), removed
 
 
 def remove_ai_connectors(text: str) -> tuple[str, list[str]]:
@@ -134,48 +206,14 @@ def remove_ai_connectors(text: str) -> tuple[str, list[str]]:
 def apply_signature_injection(text: str, signatures: list[str], rate_per_200chars: int = 1) -> tuple[str, list[str]]:
     if not signatures or not text:
         return text, []
-    chars = len(text)
-    target_count = max(1, int(chars / 200 * rate_per_200chars))
-    target_count = min(target_count, len(signatures), 4)
-
-    paragraphs = text.split("\n\n")
-    injected = []
-    used = set()
-    sig_idx = 0
-
-    for i, para in enumerate(paragraphs):
-        if len(injected) >= target_count:
-            break
-        if para.strip() and len(para) > 100:
-            while sig_idx < len(signatures):
-                sig = signatures[sig_idx]
-                sig_idx += 1
-                if sig not in used and sig in para:
-                    continue
-                if sig not in used:
-                    sentences = para.split("。")
-                    if len(sentences) > 2:
-                        insert_pos = min(2, len(sentences) - 1)
-                        sentences[insert_pos] = sentences[insert_pos].rstrip("，。") + f"，{sig}。"
-                        paragraphs[i] = "。".join(sentences)
-                        injected.append(sig)
-                        used.add(sig)
-                    break
-
-    return "\n\n".join(paragraphs), injected
+    matched = []
+    for sig in signatures:
+        if sig and sig in text and sig not in matched:
+            matched.append(sig)
+    return text, matched
 
 
 def adjust_opener(text: str, openers: list[str]) -> str:
-    if not openers:
-        return text
-    first_para = text.split("\n\n")[0] if text else ""
-    sentences = first_para.split("。")
-    if sentences:
-        opener_template = openers[0][:50]
-        if opener_template and len(sentences[0]) > 10:
-            sentences[0] = opener_template
-            rest = "。".join(sentences[1:])
-            text = sentences[0] + ("。" if rest else "") + rest + ("\n\n" + "\n\n".join(text.split("\n\n")[1:]) if len(text.split("\n\n")) > 1 else "")
     return text
 
 
@@ -189,6 +227,15 @@ def build_debug_info(
     removed_connectors: list[str],
     injected_signatures: list[str],
 ) -> dict:
+    uncertain = dna.get("uncertain_candidates", [])
+    applied_uncertain = [
+        item for item in uncertain
+        if item in injected_signatures or (isinstance(item, str) and item in rewritten)
+    ]
+    not_applied_uncertain = [
+        item for item in uncertain
+        if item not in applied_uncertain
+    ]
     return {
         "schema_version": "1.0",
         "status": "completed",
@@ -210,7 +257,8 @@ def build_debug_info(
         "dna_rules_applied": get_rewrite_rules(dna),
         "skipped_dna_rules": {
             "downgraded": list(dna.get("downgraded_features", {}).keys()) if "downgraded_features" in dna else [],
-            "not_applied": dna.get("uncertain_candidates", []),
+            "not_applied": not_applied_uncertain,
+            "applied_uncertain_candidates": applied_uncertain,
         },
     }
 
