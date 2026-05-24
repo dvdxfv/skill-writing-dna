@@ -87,6 +87,24 @@
 - `inputs/template_stripped_markdown/*.md`（剥离后的正文，作为 DNA 提取的真正输入）
 - `outputs/template_profiles/strip_report.md`（剥离报告：列出每个被识别为模板的标题/整句/长短语）
 
+### 3.3A `scripts/test_sample_sufficiency.py`
+
+职责（样本质量预检 · DNA 提取前的闸门）：
+
+- 多维样本健康度检查，文体无关（不含任何公文/特定文体先验）：篇数、字数分布、文档间相似度、近重复整篇、文档内重复、留一法稳定性 + 饱和度
+- 输出分级 `severity`（ok / light / serious），供 `run.py` 在第一确认点做软阻断判断
+- 从"事后诊断工具"前移为"提取前闸门"：`run.py pipeline` 在模板剥离后自动跑，结论并入第一确认点（见 SKILL.md Step 1.5d）
+- 只产诊断材料，不喂给 `extract_dna.py`，故不影响 DNA 产物本身
+
+输入：
+
+- `inputs/template_stripped_markdown/*.md`
+
+输出：
+
+- `outputs/debug/sample_sufficiency_test.json`（结构化多维数据）
+- `outputs/debug/sample_sufficiency_test.md`（人可读报告）
+
 ### 3.4 `scripts/extract_dna.py`
 
 职责：
@@ -115,6 +133,19 @@
 输出：
 - `outputs/dna_profiles/<user>-dna_feature_cloud.png`
 
+### 3.4B `scripts/dna_versioning.py`
+
+职责（DNA 版本管理 + 回滚）：
+
+- 用户修正 DNA 后保留历史版本，不直接覆盖
+- `save_new_version` 写 `<user>-dna-vN.json` 快照并更新当前版指针 `<user>-dna.json`
+- `rollback` 把任一版写回指针；`diff_versions` 对比两版；`list_versions` 列版本
+- 护栏：版本快照用 `-vN` 后缀，绝不与指针 `<user>-dna.json` 同名，避免污染 `run.py` 的 `*-dna.json` 发现 glob
+
+输入 / 输出：
+
+- `outputs/dna_profiles/<user>-dna.json`（当前版指针）+ `<user>-dna-vN.json`（版本快照）
+
 ### 3.5 `scripts/detect_ai_slop.py`
 
 职责：
@@ -134,6 +165,8 @@
 职责：
 
 - 根据 DNA 和模板约束改写新草稿
+- 只承担确定性辅助改写，不负责重排长文结构
+- 长文“按章节改、合并后统一术语/数字/标题层级”的行为由 `SKILL.md` / live prompt 入口驱动
 
 输入：
 

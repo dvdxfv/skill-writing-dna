@@ -6,6 +6,8 @@ Make AI-generated content sound like **you** wrote it.
 
 > 🔌 **How to use**: Works on Trae / Cursor / Claude Code / VS Code (Copilot) / CodeX. Just tell your AI tool:  
 > **"Install this writing-dna skill for me: https://github.com/dvdxfv/skill-writing-dna.git. After installation, I want to call it with `/writing-dna`."**
+>
+> **Natural-language triggers**: you can also just say *"remove AI flavor"*, *"make it sound like me"*, or *"personal writing style"* — the skill auto-activates on these (same as the Chinese triggers).
 
 ![Installation](./docs/images/3cea31070b1b8d378f728da10cf6b9b8.png)
 *Fig 1 · After giving the AI the install link, it auto-completes cloning, dependency installation, and registers Writing DNA as an available skill*
@@ -33,6 +35,25 @@ See [AI_INSTALL.md](AI_INSTALL.md) for the full install checklist. Its installer
 
 ---
 
+## Changelog
+
+### 2026-05
+
+Added:
+
+- Sample quality precheck: the first checkpoint now includes sample health across count, length distribution, document similarity, and near-duplicate drafts; serious issues require explicit confirmation before continuing.
+- Writing DNA versioning: revised DNA profiles keep history, so you can say "roll back to the previous version" or "compare with the previous version."
+- English natural-language triggers: `remove AI flavor`, `make it sound like me`, and `personal writing style`.
+- Long-document rewriting: long drafts are rewritten by chapter, then checked for terminology, numbers, and heading consistency.
+- Adjustable rewrite context: specify publication context and rewrite strength, such as social post, formal report, lighter edit, or deeper rewrite.
+
+Fixed:
+
+- Fixed `run.py extract` / `auto` failing because the extraction command did not pass `--input`.
+- Fixed sample sufficiency diagnostics crashing when fewer than 5 samples were provided.
+
+---
+
 ## What This Skill Solves
 
 AI-generated writing has two stubborn problems:
@@ -50,20 +71,20 @@ This Skill's approach isn't "write a smarter prompt." It solves the template det
 
 **Key design**: Layer 1 is completely genre-agnostic — no presets for "what a bureaucratic template looks like." An author doesn't self-plagiarize, so cross-document literal repetition must be format requirements. Layer 2 handles the "structurally identical but semantically different" templates Layer 1 can't catch (short phrases like "indicators mainly assess"), delegating judgment to the AI. Layer 3 requires your sign-off — semantic-level decisions cannot be made by algorithms or models alone.
 
-The full pipeline has **3 mandatory human checkpoints** — template strip/keep confirmation (🔵 Step 2), DNA profile accuracy (🔵 Step 4), and rewrite quality (🔵 Step 7) — because at every layer, the final call must be yours.
+The full pipeline has **3 mandatory human checkpoints** — template strip/keep confirmation (🔵 Step 3), DNA profile accuracy (🔵 Step 5), and rewrite quality (🔵 Step 8) — because at every layer, the final call must be yours.
 
 ## Workflow Overview
 
 ### One-Liner
 
 ```
-Drop samples → Layer1 auto-strip → ⏸️ Confirm template strip/keep → Extract DNA → ⏸️ Confirm DNA → Drop draft → Rewrite → ⏸️ Confirm result → Done
+Drop samples → Auto preprocess + sample precheck → ⏸️ Confirm template strip/keep and sample risk → Extract DNA → ⏸️ Confirm DNA with version history → Drop draft → Rewrite by context/strength (long drafts by chapter) → ⏸️ Confirm result and skipped rules → Done
 ```
 
 **Only 3 points require your attention:**
-- 🔵 **After template stripping** — Confirm Layer 2's semantic template findings
-- 🔵 **After DNA extraction** — Verify the profile is accurate
-- 🔵 **After rewriting** — Confirm the result meets your standards
+- 🔵 **After template stripping** — Confirm Layer 2's semantic template findings and any sample-quality risk
+- 🔵 **After DNA extraction** — Verify the profile is accurate; revisions are versioned automatically
+- 🔵 **After rewriting** — Confirm the result and see whether any rules were skipped or downgraded
 
 Everything else runs automatically.
 
@@ -74,16 +95,19 @@ Everything else runs automatically.
 ```mermaid
 flowchart TD
     A["📁 1. Drop Samples"] --> B["🔧 2. Auto Preprocess<br/>DOCX convert→Filter→Template strip"]
-    B --> C{"🔵 3. Template strip/keep?"}
+    B --> B2["📋 Sample Quality Precheck<br/>Count→Length→Similarity→Near duplicates"]
+    B2 --> C{"🔵 3. Template strip/keep + sample risk?"}
     C -->|❌ Adjust| B1["📋 Tell AI what's template<br/>Re-judge strip/keep"]
     B1 --> C
     C -->|✅ Confirm| D["🧬 4. Extract DNA<br/>Auto stats + Manual review"]
     D --> E{"🔵 5. DNA accurate?"}
-    E -->|❌ No| E1["🔍 Diagnose samples<br/>Leave-one-out + Saturation curve"]
+    E -->|❌ No| E1["✏️ Revise DNA<br/>Save new version"]
     E1 --> D
-    E -->|✅ Yes| F["📁 6. Drop AI draft"]
-    F --> G["✏️ 7. Rewrite by DNA<br/>Blacklist removal + Connector swap + Signature implant"]
-    G --> H{"🔵 8. Happy with result?"}
+    E -->|✅ Yes| E2["💾 Save current DNA<br/>Keep version history"]
+    E2 --> F["📁 6. Drop AI draft<br/>Optional context/strength"]
+    F --> G["✏️ 7. Rewrite by DNA<br/>Short by paragraph→Long by chapter"]
+    G --> G2["📊 Generate report<br/>Show skipped/downgraded rules"]
+    G2 --> H{"🔵 8. Happy with result?"}
     H -->|❌ No| I["🔄 Switch model / Tune params / Check samples"]
     I --> G
     H -->|✅ Yes| J["🏆 9. Deliver"]
@@ -104,7 +128,7 @@ After extracting DNA, the model **stops and waits for your confirmation**. It di
 
 | # | What you'll see | How to judge | What to do if wrong |
 |:---:|:---|:---|:---|
-| 1 | Your top 15 high-frequency phrases (+ hotwords chart) | Any "I never say that"? Missing your go-to expressions? | Tell the model "XX is not mine, replace with YY" |
+| 1 | Your strongest writing features (+ feature cloud) | Any "I never say that"? Missing your go-to expressions? | Tell the model "XX is not mine, replace with YY" |
 | 2 | "Avg X words per sentence, short sentences X%" | Does the rhythm match your writing? Do you prefer long or short sentences? | Tell the model "I usually write X words per sentence" |
 | 3 | "The following are flagged as AI clichés you never use" | Did it falsely flag your pet phrases? | Point out false positives → model removes them from the blacklist |
 | 4 | "Your articles typically open with… and close with…" | Do they match your usual openers/closers? | Copy your real openers/closers and send them to the model |
@@ -124,6 +148,8 @@ The test tells you: whether you need more samples, whether type diversity is the
 
 After rewriting and generating the comparison report, the model **stops and waits for your confirmation**:
 
+Before rewriting, the default is **general context + standard strength**. You can ask for a social-post style, formal-report tone, lighter edit, or stronger rewrite. For long drafts, the model tells you it will rewrite by chapter, then checks terminology, numbers, and heading levels after merging. If some DNA rules were not applied because they were unstable or would hurt information integrity, the model says so and can explain which ones.
+
 | # | What you'll see | How to judge | What to do if wrong |
 |:---:|:---|:---|:---|
 | 1 | Side-by-side comparison + "AI-flavor score dropped from X to Y, removed Z clichés" | Read the rewrite — still smells like AI? Any "leverage/empower/ecosystem"? | Point out the lingering phrases → targeted rewrite |
@@ -132,7 +158,7 @@ After rewriting and generating the comparison report, the model **stops and wait
 | 4 | Full rewritten text | Can you publish/submit this as-is, or does it still need hand-editing? | "Needs minor fixes" → specify which paragraphs → spot-edit |
 
 **If still not satisfied overall** → Troubleshoot in order:
-1. **Is the DNA accurate?** — Re-check the hotwords chart and signature phrases. Did you approve too quickly in Step 4?
+1. **Is the DNA accurate?** — Re-check the feature cloud and signature phrases. Did you approve too quickly in Step 5?
 2. **Are samples sufficient?** — `python scripts/test_sample_sufficiency.py`
 3. **Try a different model** — Model performance varies significantly for style rewriting
 
@@ -371,28 +397,33 @@ Problem appears
 
 <a id="sample-sufficiency-test"></a>
 
-### ① Sample Sufficiency Test
+### ① Sample Sufficiency Test (multi-dimensional pre-check)
 
 > 📖 **Further reading**: For detailed advice on sample size and type diversity, see [About Samples](#about-samples) below.
 
 **Symptom**: DNA features are sparse, generic, or "this doesn't feel like me"
 
+This step is now a **multi-dimensional pre-check** (genre-agnostic — works for reports, social posts, blogs, emails alike). `run.py pipeline` **runs it automatically** after template stripping and folds the verdict into the **first confirmation point** (template-strip confirmation) — no need to run it separately. You can still run it manually to diagnose:
+
 ```bash
 python scripts/test_sample_sufficiency.py
 ```
 
-Report output to `outputs/debug/sample_sufficiency_test.md`. Check these two metrics:
+Report output to `outputs/debug/sample_sufficiency_test.md`, covering:
 
-| Metric | ✅ Normal | ⚠️ Watch | ❌ Problem |
-|:---|:---|:---|:---|
-| **Leave-one-out variance** | < 0.05 | 0.05 ~ 0.15 | > 0.15 |
-| **Saturation curve** | Plateaued | Near plateau | Still rising |
+| Dimension | What it checks |
+|:---|:---|
+| **Count** | Whether you have enough samples (5–12 recommended) |
+| **Length distribution** | Overly short samples (< 800 chars); whether one doc dominates the DNA |
+| **Inter-document similarity** | Whether docs are too alike (a single type lets domain noise pose as personal style) |
+| **Near-duplicate docs** | Whether a draft/final of the same piece slipped in (effectively fewer samples) |
+| **Leave-one-out + saturation** | Whether feature ranking is stable; whether more samples still help |
 
-**Actions by result:**
+The report header gives a **graded verdict**:
 
-- **❌ High variance + curve not saturated** → Not enough samples. Add **2-3 different types** of documents, then re-run `run.py extract`
-- **⚠️ Moderate variance + curve near plateau** → Basically usable, but some features unstable. Continue to step ②
-- **✅ Low variance + curve saturated** → Samples are fine. Issue is elsewhere. Go to step ②
+- **✅ ok** → samples healthy, extract directly
+- **⚠️ light** (near the floor / uneven / single type) → flagged, but you can continue
+- **❌ serious** (< 5 docs / highly homogeneous / mostly near-duplicates) → you'll be warned; confirm "I know the risk, continue" to proceed, or add **2-3 different-type** docs and re-run `run.py extract`
 
 ### ② Template Stripping Check
 
@@ -427,6 +458,8 @@ Open `outputs/dna_profiles/<your-name>-dna.json` and check each rule:
 | **Connector preferences** | Unfamiliar connectors appear | Check if `connectors` blacklist/whitelist is complete |
 | **Signature phrases** | Not implanted or placed awkwardly | Check if `signature_phrases` has enough example sentences |
 | **Institutional/high-freq words** | Word choice deviates significantly | Check if `vocabulary_preferences` dictionary is accurate |
+
+> 💡 **Versioned automatically**: each time you revise your DNA, a new version is saved (old ones are kept). Say *"roll back to the previous version"* to undo, or *"compare with the previous version"* to see what changed.
 
 After manually editing the DNA JSON, re-run:
 
@@ -686,3 +719,5 @@ writing-dna/
 ├── requirements.txt                    # Python dependency list
 └── run.py                              # one-click pipeline entrypoint
 ```
+
+> **About the test suite**: The automated tests live in a local `tests/` directory (pytest, for development-time regression and acceptance checks). This directory is excluded wholesale via `.gitignore` and is **not uploaded to GitHub**, which is why it does not appear in the tree above — not seeing `tests/` after cloning is expected.
