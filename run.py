@@ -14,6 +14,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -65,6 +66,37 @@ def _run_script(script_name: str, args: list[str]) -> int:
     return result.returncode
 
 
+def _sample_precheck_summary(stripped_dir: Path) -> str | None:
+    """
+    跑样本预检，返回一行人话结论（含 ✅/⚠️/❌），供第一确认点一并展示。
+
+    设计（见 PROJECT_STATUS 2026-05-24）：不新增停等点，把结论附到「模板剥留确认」
+    消息里；只返回一行，完整多维报告留在 outputs/debug/，排查时再看。拿不到样本或
+    脚本异常就返回 None，由调用方决定。
+    """
+    md_files = _visible_files(stripped_dir, ("*.md",))
+    if len(md_files) < 2:
+        return None
+    script = SCRIPTS_DIR / "test_sample_sufficiency.py"
+    if not script.exists():
+        return None
+    with tempfile.TemporaryDirectory() as td:
+        out_json = Path(td) / "precheck.json"
+        result = subprocess.run(
+            [sys.executable, str(script), "--input", str(stripped_dir),
+             "--output-json", str(out_json), "--output-md", str(Path(td) / "precheck.md")],
+            env=_subprocess_env(), capture_output=True, text=True,
+            encoding="utf-8", errors="replace",
+        )
+        if result.returncode != 0 or not out_json.exists():
+            return None
+        try:
+            data = json.loads(out_json.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return None
+        return data.get("one_line")
+
+
 def cmd_extract(args):
     input_dir = INPUTS_DIR / "template_stripped_markdown"
     md_files = _visible_files(input_dir, ("*.md",))
@@ -83,7 +115,7 @@ def cmd_extract(args):
     output_path = OUTPUTS_DIR / "dna_profiles"
     output_path.mkdir(parents=True, exist_ok=True)
     extra += ["--output", str(output_path / f"{args.user_name or 'user'}-dna.json")]
-    return _run_script("extract_dna.py", [str(p) for p in md_files] + extra)
+    return _run_script("extract_dna.py", ["--input"] + [str(p) for p in md_files] + extra)
 
 
 def cmd_rewrite(args):
@@ -177,6 +209,9 @@ def cmd_pipeline(args):
             print(f"⚠️  {name} 执行失败，停止后续步骤")
             return ret
     print("\n✅ 前置处理链路完成")
+    summary = _sample_precheck_summary(INPUTS_DIR / "template_stripped_markdown")
+    if summary:
+        print(f"\n📋 样本预检：{summary}")
     print("\n⚠️  第一个必停确认点：请先检查模板剥离报告，确认剥离结果是否正确。")
     print(f"   报告位置：{OUTPUTS_DIR / 'template_profiles' / 'strip_report.md'}")
     print("   确认剥离结果无误后，再运行 `python run.py extract` 提取 DNA。")

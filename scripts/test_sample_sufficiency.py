@@ -1,26 +1,37 @@
 #!/usr/bin/env python3
 """
-样本量充足性测试：留一法 + 同型异型拆分 + 特征饱和度曲线
+样本质量预检：多维健康度（文体无关）
+
+从「公文专用诊断工具」升级为「通用样本预检闸门」。所有维度都不依赖任何文体先验，
+公文 / 小红书 / 博客 / 邮件 / 论文 同样适用。
+
+覆盖维度（见 PROJECT_STATUS.md 2026-05-24「样本预检覆盖维度」）：
+  1. 数量          —— 篇数 vs 5-12 区间
+  2. 字数分布      —— 每篇字数、超短篇、单篇是否过度主导
+  3. 文档间相似度  —— 两两相似度，整体过高=类型单一/同质
+  4. 重复内容      —— 近重复整篇（strip_template 行级对齐抓不到的）+ 文档内重复
+  5. 稳定性/饱和度 —— 留一法 + 饱和度曲线，排序基于「通用特征向量」
+并给出分级 severity（ok / light / serious）供 run.py 第一确认点做软阻断判断。
 
 用法:
   python scripts/test_sample_sufficiency.py
-  python scripts/test_sample_sufficiency.py --input inputs/template_stripped_markdown/ --output outputs/debug/sample_sufficiency_test.md
+  python scripts/test_sample_sufficiency.py --input <目录> --output-json <a.json> --output-md <b.md>
 """
 
 import argparse
+import itertools
 import json
 import re
 import sys
-import itertools
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="样本量充足性测试：留一法 + 饱和度曲线")
-    p.add_argument("--input", default=None, help="模板剥离后的markdown目录（默认自动检测）")
-    p.add_argument("--output-json", default=None, help="JSON输出路径")
-    p.add_argument("--output-md", default=None, help="Markdown报告输出路径")
+    p = argparse.ArgumentParser(description="样本质量预检：多维健康度（文体无关）")
+    p.add_argument("--input", default=None, help="模板剥离后的 markdown 目录（默认自动检测）")
+    p.add_argument("--output-json", default=None, help="JSON 输出路径")
+    p.add_argument("--output-md", default=None, help="Markdown 报告输出路径")
     return p.parse_args()
 
 
@@ -29,6 +40,10 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 DEFAULT_INPUT = PROJECT_ROOT / "inputs" / "template_stripped_markdown"
 DEFAULT_JSON = PROJECT_ROOT / "outputs" / "debug" / "sample_sufficiency_test.json"
 DEFAULT_MD = PROJECT_ROOT / "outputs" / "debug" / "sample_sufficiency_test.md"
+
+SHORT_DOC_CHARS = 800        # 单篇低于此字数视为过短（与 SKILL.md 输入建议一致）
+NEAR_DUP_THRESHOLD = 0.8     # 文档间相似度 ≥ 此值视为近重复整篇
+HOMOGENEOUS_THRESHOLD = 0.5  # 平均两两相似度 ≥ 此值视为整体同质/类型单一
 
 
 def configure_utf8_stdio() -> None:
@@ -40,253 +55,292 @@ def configure_utf8_stdio() -> None:
                 pass
 
 
-# ── 文档标签（项目类型）──
-DOC_TAGS = {
-    "（某人）2023-2024年山西美好蕴育生物科技有限责任公司绩效评价报告（定稿）.md": "入园企业",
-    "（某人）2023-2024年山西途悦选煤工程技术股份有限公司绩效评价报告（初稿）.md": "入园企业",
-    "（某人）2024年保德县韩家川乡寨沟村壮大村集体经济项目绩效评价报告(2).md": "村集体",
-    "（某人）2024年运城市财政局评审经费项目支出绩效评价报告.md": "财政评审",
-    "（某人）2025年榆次区改制企业经费项目绩效评价报告(1).md": "改制经费",
-}
-
-# ── 提取可量化特征 ──
+# ══════════════════════════════════════════════════
+#  通用特征（文体无关）——用于留一法 / 饱和度排序
+# ══════════════════════════════════════════════════
 def extract_features(text: str) -> dict[str, float]:
-    features = {}
+    """只用文体无关的统计量，不含任何特定文体的词汇先验。"""
+    features: dict[str, float] = {}
+    chars = max(len(text), 1)
 
-    # 1. 枚举式并列展开
-    enum_count = len(re.findall(r"(?:一是|二是|三是|四是|五是|六是)", text))
-    features["enum_density"] = enum_count / max(len(text), 1) * 1000
-
-    # 2. 建议密度（建议+应+需+可）
-    suggest_count = len(re.findall(r"(?:建议|应当?|[应需可]以?)", text))
-    features["suggest_density"] = suggest_count / max(len(text), 1) * 1000
-
-    # 3. 制度名词密度
-    institution_count = len(re.findall(r"(?:机制|制度|流程|体系|权责|职责|衔接|管理办法)", text))
-    features["institution_density"] = institution_count / max(len(text), 1) * 1000
-
-    # 4. 数字嵌入密度（非表格数字）
-    number_count = len(re.findall(r"\d+\.?\d*万?元?人?家?个?次?%?", text))
-    features["number_density"] = number_count / max(len(text), 1) * 1000
-
-    # 5. 平均句长
-    sentences = re.split(r"[。！？\n]+", text)
-    sentences = [s.strip() for s in sentences if s.strip() and len(s.strip()) > 3]
+    sentences = [s.strip() for s in re.split(r"[。！？!?\n]+", text) if len(s.strip()) > 3]
     if sentences:
-        features["avg_sentence_len"] = sum(len(s) for s in sentences) / len(sentences)
+        lengths = [len(s) for s in sentences]
+        mean_len = sum(lengths) / len(lengths)
+        features["avg_sentence_len"] = mean_len
+        features["short_sentence_ratio"] = sum(1 for n in lengths if n <= 15) / len(lengths) * 100
+        variance = sum((n - mean_len) ** 2 for n in lengths) / len(lengths)
+        features["sentence_len_cv"] = (variance ** 0.5) / mean_len * 100 if mean_len else 0
 
-    # 6. "先判断后展开" — 检测段落首句是否为判断句（含"是/为/存在/涉及/欠缺/不足"）
-    paras = re.split(r"\n\n+", text)
-    judgment_openers = 0
-    for p in paras:
-        p = p.strip()
-        if not p or len(p) < 10:
-            continue
-        first_sent = re.split(r"[。！？]", p)[0]
-        if re.search(r"(?:是|为|存在|涉及|欠缺|不足|不到位|不充分|有所)", first_sent) and len(first_sent) < 80:
-            judgment_openers += 1
-    features["judgment_opener_ratio"] = judgment_openers / max(len(paras), 1)
+    cjk = re.findall(r"[一-鿿]", text)
+    features["vocab_richness"] = len(set(cjk)) / max(len(cjk), 1) * 100
 
-    # 7. 转折表达密度
-    contrast_count = len(re.findall(r"(?:但|然而|不过|尽管|虽然)", text))
-    features["contrast_density"] = contrast_count / max(len(text), 1) * 1000
+    paragraphs = [p for p in re.split(r"\n\s*\n", text) if p.strip()]
+    if paragraphs:
+        features["avg_paragraph_len"] = sum(len(p) for p in paragraphs) / len(paragraphs)
 
-    # 8. 消极/缺陷词密度
-    deficiency_count = len(re.findall(r"(?:欠缺|不足|不到位|不充分|不完整|不规范|未\d)", text))
-    features["deficiency_density"] = deficiency_count / max(len(text), 1) * 1000
-
+    features["comma_density"] = len(re.findall(r"[，,]", text)) / chars * 1000
+    features["question_density"] = len(re.findall(r"[？?]", text)) / chars * 1000
+    features["exclaim_density"] = len(re.findall(r"[！!]", text)) / chars * 1000
     return features
 
 
-def load_docs(input_dir: Path):
+def chinese_char_count(text: str) -> int:
+    return len(re.findall(r"[一-鿿]", text))
+
+
+def load_docs(input_dir: Path) -> dict:
+    """加载样本。不再依赖任何硬编码文档标签——文体无关。"""
     docs = {}
     for f in sorted(input_dir.glob("*.md")):
         text = f.read_text(encoding="utf-8")
-        docs[f.name] = {"text": text, "tag": DOC_TAGS.get(f.name, "未知"), "chars": len(text)}
+        docs[f.name] = {"text": text, "chars": chinese_char_count(text)}
     return docs
 
 
-def all_combinations(doc_names, min_n=1, max_n=None):
-    if max_n is None:
-        max_n = len(doc_names)
-    result = []
-    for n in range(min_n, max_n + 1):
-        result.extend(itertools.combinations(doc_names, n))
-    return result
-
-
 def feature_ranking(feature_vec: dict[str, float]) -> list[str]:
-    """返回特征按值的排序（从高到低），用于比较稳定性"""
     return sorted(feature_vec.keys(), key=lambda k: feature_vec.get(k, 0), reverse=True)
 
 
 def rank_distance(rank1: list[str], rank2: list[str]) -> float:
-    """计算两个排名的距离（0=完全相同, 1=完全不同）"""
     common = set(rank1) & set(rank2)
     if not common:
         return 1.0
-    dist = 0.0
-    for feat in common:
-        dist += abs(rank1.index(feat) - rank2.index(feat))
-    max_dist = len(common) * len(common)  # worst case
-    return dist / max(max_dist, 1)
+    dist = sum(abs(rank1.index(f) - rank2.index(f)) for f in common)
+    return dist / max(len(common) * len(common), 1)
 
 
 def avg_features(doc_list):
-    """对多篇文档的特征取平均"""
     if not doc_list:
         return {}
-    keys = doc_list[0].keys()
-    avg = {}
-    for k in keys:
-        avg[k] = sum(d[k] for d in doc_list) / len(doc_list)
-    return avg
+    keys = set().union(*(d.keys() for d in doc_list))
+    return {k: sum(d.get(k, 0) for d in doc_list) / len(doc_list) for k in keys}
 
 
 # ══════════════════════════════════════════════════
-#  TEST 1: 留一法稳定性
+#  维度 2：字数分布
 # ══════════════════════════════════════════════════
-def test_leave_one_out(docs):
-    """逐篇去掉，看特征排序是否稳定"""
-    names = list(docs.keys())
-    full_features = avg_features([extract_features(docs[n]["text"]) for n in names])
-    full_rank = feature_ranking(full_features)
-
-    results = []
-    for i, name in enumerate(names):
-        subset = [n for j, n in enumerate(names) if j != i]
-        sub_features = avg_features([extract_features(docs[n]["text"]) for n in subset])
-        sub_rank = feature_ranking(sub_features)
-        dist = rank_distance(full_rank, sub_rank)
-        results.append({
-            "removed": name,
-            "subset_n": len(subset),
-            "rank_distance": round(dist, 3),
-            "full_rank": full_rank[:6],
-            "subset_rank": sub_rank[:6],
-        })
-
-    avg_dist = sum(r["rank_distance"] for r in results) / len(results)
-    return {"per_doc": results, "avg_distance": round(avg_dist, 3), "stable": avg_dist < 0.25}
-
-
-# ══════════════════════════════════════════════════
-#  TEST 2: 同型 vs 异型拆分
-# ══════════════════════════════════════════════════
-def test_type_split(docs):
-    """按项目类型分组，比较组间差异"""
-    groups = {}
-    for name, info in docs.items():
-        tag = info["tag"]
-        groups.setdefault(tag, []).append(name)
-
-    # 同型组：同标签取前2篇
-    same_type_names = []
-    same_rank = []
-    for tag, names in groups.items():
-        if len(names) >= 2:
-            same_type_names = names[:2]
-            same_features = avg_features([extract_features(docs[n]["text"]) for n in same_type_names])
-            same_rank = feature_ranking(same_features)
-            break
-
-    # 异型组：取三种类型各1篇
-    cross_type_names = []
-    for tag, names in groups.items():
-        if names:
-            cross_type_names.append(names[0])
-    cross_type_names = cross_type_names[:3]
-    cross_features = avg_features([extract_features(docs[n]["text"]) for n in cross_type_names])
-    cross_rank = feature_ranking(cross_features)
-
-    # 全量5篇组
-    all_names = list(docs.keys())
-    all_features = avg_features([extract_features(docs[n]["text"]) for n in all_names])
-    all_rank = feature_ranking(all_features)
-
+def length_distribution(docs: dict) -> dict:
+    items = [(n, docs[n]["chars"]) for n in docs]
+    lengths = sorted(c for _, c in items)
+    total = sum(lengths) or 1
+    short_docs = [n for n, c in items if c < SHORT_DOC_CHARS]
     return {
-        "same_type_2docs": {
-            "documents": same_type_names,
-            "rank_top6": same_rank[:6],
-            "tag": "入园企业（共建园区系列，背景材料高度共用）",
-        },
-        "cross_type_3docs": {
-            "documents": cross_type_names,
-            "rank_top6": cross_rank[:6],
-            "tag": "三种不同类型各1篇",
-        },
-        "all_5docs": {
-            "rank_top6": all_rank[:6],
-        },
-        "same_vs_all_distance": round(rank_distance(same_rank, all_rank), 3),
-        "cross_vs_all_distance": round(rank_distance(cross_rank, all_rank), 3),
+        "min": min(lengths),
+        "max": max(lengths),
+        "median": lengths[len(lengths) // 2],
+        "mean": round(total / len(lengths), 1),
+        "short_docs": short_docs,
+        "has_short": bool(short_docs),
+        "dominant_ratio": round(max(lengths) / total, 2),
     }
 
 
 # ══════════════════════════════════════════════════
-#  TEST 3: 特征饱和度曲线
+#  维度 3 + 4：文档间相似度 / 近重复整篇 / 文档内重复
 # ══════════════════════════════════════════════════
-def test_saturation_curve(docs):
-    """对所有组合抽取特征，看稳定特征数随篇数变化"""
-    names = list(docs.keys())
-    all_combos = all_combinations(names, min_n=1, max_n=len(names))
+def _shingles(text: str, n: int = 3) -> set:
+    cjk = re.sub(r"[^一-鿿]", "", text)
+    if len(cjk) < n:
+        return {cjk} if cjk else set()
+    return {cjk[i:i + n] for i in range(len(cjk) - n + 1)}
 
-    # 全量排名作为基准
-    full_features = avg_features([extract_features(docs[n]["text"]) for n in names])
-    full_rank = feature_ranking(full_features)
 
-    # 按篇数分组统计
-    by_n = {}
-    for combo in all_combos:
-        n = len(combo)
-        feat = avg_features([extract_features(docs[n]["text"]) for n in combo])
-        rk = feature_ranking(feat)
-        dist = rank_distance(rk, full_rank)
-        overlap = len(set(rk[:6]) & set(full_rank[:6]))
-        by_n.setdefault(n, []).append({
-            "combo": list(combo),
-            "rank_distance": round(dist, 3),
-            "top6_overlap": overlap,
-        })
+def _jaccard(a: set, b: set) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
 
+
+def inter_doc_similarity(docs: dict) -> dict:
+    names = list(docs)
+    shingles = {n: _shingles(docs[n]["text"]) for n in names}
+    pairs = []
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            sim = round(_jaccard(shingles[names[i]], shingles[names[j]]), 3)
+            pairs.append([names[i], names[j], sim])
+    sims = [p[2] for p in pairs] or [0.0]
+    mean_sim = round(sum(sims) / len(sims), 3)
+    return {
+        "mean_pairwise": mean_sim,
+        "max_pairwise": max(sims),
+        "homogeneous": mean_sim >= HOMOGENEOUS_THRESHOLD,
+        "pairs": pairs,
+    }
+
+
+def intra_doc_repetition(text: str) -> float:
+    sentences = [s.strip() for s in re.split(r"[。！？!?\n]+", text) if len(s.strip()) > 5]
+    if not sentences:
+        return 0.0
+    counts = Counter(sentences)
+    duplicate = sum(v - 1 for v in counts.values() if v > 1)
+    return round(duplicate / len(sentences), 3)
+
+
+def duplication(docs: dict, sim_pairs: list) -> dict:
+    near_dups = [[a, b] for a, b, s in sim_pairs if s >= NEAR_DUP_THRESHOLD]
+    intra = {n: intra_doc_repetition(docs[n]["text"]) for n in docs}
+    heavy_intra = [n for n, r in intra.items() if r >= 0.2]
+    return {
+        "near_duplicate_pairs": near_dups,
+        "intra_doc_repetition": intra,
+        "heavy_intra_repetition_docs": heavy_intra,
+    }
+
+
+# ══════════════════════════════════════════════════
+#  维度 5：留一法稳定性 + 饱和度曲线（通用特征）
+# ══════════════════════════════════════════════════
+def test_leave_one_out(docs: dict) -> dict:
+    names = list(docs)
+    full_rank = feature_ranking(avg_features([extract_features(docs[n]["text"]) for n in names]))
+    results = []
+    for i, name in enumerate(names):
+        subset = [n for j, n in enumerate(names) if j != i]
+        sub_rank = feature_ranking(avg_features([extract_features(docs[n]["text"]) for n in subset]))
+        results.append({"removed": name, "rank_distance": round(rank_distance(full_rank, sub_rank), 3)})
+    avg_dist = sum(r["rank_distance"] for r in results) / len(results) if results else 1.0
+    return {"per_doc": results, "avg_distance": round(avg_dist, 3), "stable": avg_dist < 0.25,
+            "full_rank": full_rank[:6]}
+
+
+def test_saturation_curve(docs: dict) -> dict:
+    names = list(docs)
+    full_rank = feature_ranking(avg_features([extract_features(docs[n]["text"]) for n in names]))
+    by_n: dict[int, list] = {}
+    for r in range(1, len(names) + 1):
+        for combo in itertools.combinations(names, r):
+            rank = feature_ranking(avg_features([extract_features(docs[n]["text"]) for n in combo]))
+            overlap = len(set(rank[:6]) & set(full_rank[:6]))
+            by_n.setdefault(r, []).append(overlap)
     curve = {}
-    for n in sorted(by_n.keys()):
-        entries = by_n[n]
-        avg_dist = sum(e["rank_distance"] for e in entries) / len(entries)
-        avg_overlap = sum(e["top6_overlap"] for e in entries) / len(entries)
-        curve[n] = {
-            "combinations": len(entries),
-            "avg_rank_distance": round(avg_dist, 3),
-            "avg_top6_overlap": round(avg_overlap, 1),
-        }
-
+    for r in sorted(by_n):
+        entries = by_n[r]
+        curve[r] = {"combinations": len(entries),
+                    "avg_top6_overlap": round(sum(entries) / len(entries), 1)}
     return curve
 
 
 # ══════════════════════════════════════════════════
-#  一句话结论生成
+#  分级 + 一句话结论
 # ══════════════════════════════════════════════════
-def generate_conclusion(t1, t2, t3, doc_count):
-    stable = t1["avg_distance"] < 0.25
-    n4 = t3.get(4, {})
-    n5 = t3.get(5, {})
-    sat_gain = (n5.get("avg_top6_overlap", 0) - n4.get("avg_top6_overlap", 0)) if (n4 and n5) else 99
-    saturated = sat_gain < 0.5
+def assess(docs, length_dist, similarity, dup, leave_one_out) -> tuple[str, str, list[str], str]:
+    n = len(docs)
+    near_dups = dup["near_duplicate_pairs"]
+    effective = n - len(near_dups)  # 近重复对折算成 1 篇有效样本
 
-    if doc_count >= 8 and stable and saturated:
-        return "✅ 样本充足", "当前样本量足够，DNA特征稳定且已饱和，可以直接用于提取。"
-    if stable and saturated:
-        return "✅ 样本基本够用", f"当前{doc_count}篇的特征排序稳定、曲线已饱和，够用。如需增强优先加不同类型文档。"
-    if stable and not saturated:
-        return "⚠️ 接近但未饱和", f"特征排序稳定但曲线仍在上升，建议补到8篇（不同类型）。"
-    if not stable:
-        return "❌ 样本不足", f"留一法波动较大({t1['avg_distance']:.2f})，当前{doc_count}篇不够稳，建议补到8篇以上。"
-    return "⚠️ 需要更多样本", "建议补充不同类型的文档后重新测试。"
+    reasons = []
+    if near_dups:
+        pretty = "、".join("/".join(pair) for pair in near_dups)
+        reasons.append(f"{len(near_dups)} 对近重复整篇（{pretty}），等于只有 {effective} 篇不同的")
+    if length_dist["has_short"]:
+        reasons.append(f"{len(length_dist['short_docs'])} 篇过短（<{SHORT_DOC_CHARS}字）：{'、'.join(length_dist['short_docs'])}")
+    if length_dist["dominant_ratio"] >= 0.5 and n >= 2:
+        reasons.append(f"单篇字数占比 {int(length_dist['dominant_ratio'] * 100)}%，长文主导 DNA")
+    if similarity["homogeneous"]:
+        reasons.append(f"文档间相似度偏高（均值 {similarity['mean_pairwise']}），类型偏单一")
+    if not leave_one_out["stable"]:
+        reasons.append(f"留一法波动较大（{leave_one_out['avg_distance']}），特征不稳")
+
+    if effective < 3 or len(near_dups) >= max(1, n // 2):
+        severity = "serious"
+    elif n < 5 or near_dups or length_dist["has_short"] or similarity["homogeneous"] or not leave_one_out["stable"]:
+        severity = "light"
+    else:
+        severity = "ok"
+
+    verdict = {"ok": "✅ 样本健康", "light": "⚠️ 样本可用但有提醒", "serious": "❌ 样本有严重问题"}[severity]
+    if severity == "ok":
+        one_line = f"✅ {n} 篇样本健康：字数均衡、无近重复、类型有区分，可直接提取。"
+    else:
+        head = {"light": "⚠️", "serious": "❌"}[severity]
+        one_line = f"{head} {n} 篇样本：" + "；".join(reasons[:3]) + "。"
+    return severity, verdict, reasons, one_line
+
+
+def build_results(docs: dict) -> dict:
+    names = list(docs)
+    total_chars = sum(docs[n]["chars"] for n in names)
+
+    length_dist = length_distribution(docs)
+    similarity = inter_doc_similarity(docs)
+    dup = duplication(docs, similarity["pairs"])
+    loo = test_leave_one_out(docs)
+    saturation = test_saturation_curve(docs)
+
+    severity, verdict, reasons, one_line = assess(docs, length_dist, similarity, dup, loo)
+
+    return {
+        "total_docs": len(docs),
+        "total_chars": total_chars,
+        "severity": severity,
+        "verdict": verdict,
+        "one_line": one_line,
+        "reasons": reasons,
+        "doc_list": {n: docs[n]["chars"] for n in names},
+        "dimensions": {
+            "count": {"docs": len(docs), "recommended_min": 5, "recommended_best": 8},
+            "length_distribution": length_dist,
+            "inter_doc_similarity": {k: v for k, v in similarity.items() if k != "pairs"},
+            "duplication": dup,
+        },
+        "similarity_pairs": similarity["pairs"],
+        "test_leave_one_out": loo,
+        "test_saturation": saturation,
+    }
 
 
 # ══════════════════════════════════════════════════
-#  MAIN
+#  Markdown 报告（不依赖任何特定篇数，避免历史崩溃）
 # ══════════════════════════════════════════════════
+def build_md(results: dict) -> str:
+    L = []
+    L.append("# 样本质量预检报告\n")
+    L.append(f"> **{results['verdict']}** — {results['one_line']}\n")
+    L.append(f"**样本数**：{results['total_docs']} 篇 · **总字数**：{results['total_chars']:,} 字 · "
+             f"**分级**：`{results['severity']}`\n")
+
+    ld = results["dimensions"]["length_distribution"]
+    sim = results["dimensions"]["inter_doc_similarity"]
+    dup = results["dimensions"]["duplication"]
+
+    L.append("## 字数分布\n")
+    L.append(f"- 最短 {ld['min']} / 中位 {ld['median']} / 最长 {ld['max']} / 均值 {ld['mean']} 字")
+    L.append(f"- 单篇最大占比：{int(ld['dominant_ratio'] * 100)}%")
+    if ld["has_short"]:
+        L.append(f"- ⚠️ 过短样本（<{SHORT_DOC_CHARS}字）：{'、'.join(ld['short_docs'])}")
+    L.append("")
+
+    L.append("## 文档间相似度\n")
+    L.append(f"- 两两相似度均值 {sim['mean_pairwise']} / 最大 {sim['max_pairwise']}")
+    L.append(f"- {'⚠️ 整体偏同质（类型单一）' if sim['homogeneous'] else '✅ 类型有区分'}")
+    L.append("")
+
+    L.append("## 重复内容\n")
+    if dup["near_duplicate_pairs"]:
+        for a, b in dup["near_duplicate_pairs"]:
+            L.append(f"- ⚠️ 近重复整篇：`{a}` ↔ `{b}`")
+    else:
+        L.append("- ✅ 未发现近重复整篇")
+    if dup["heavy_intra_repetition_docs"]:
+        L.append(f"- ⚠️ 文档内大量重复：{'、'.join(dup['heavy_intra_repetition_docs'])}")
+    L.append("")
+
+    loo = results["test_leave_one_out"]
+    L.append("## 留一法稳定性\n")
+    L.append(f"- 平均排名距离 {loo['avg_distance']}（<0.25 为稳）→ {'✅ 稳定' if loo['stable'] else '❌ 不稳'}")
+    L.append("")
+
+    if results["reasons"]:
+        L.append("## 提醒\n")
+        for r in results["reasons"]:
+            L.append(f"- {r}")
+        L.append("")
+    return "\n".join(L)
+
+
 def main():
     configure_utf8_stdio()
     args = parse_args()
@@ -300,134 +354,24 @@ def main():
 
     docs = load_docs(input_dir)
     if len(docs) < 2:
-        print(f"Error: 至少需要2篇文档才能运行测试，当前只有 {len(docs)} 篇", file=sys.stderr)
+        print(f"Error: 至少需要 2 篇文档才能预检，当前只有 {len(docs)} 篇", file=sys.stderr)
         sys.exit(1)
 
-    names = list(docs.keys())
-    total_chars = sum(info["chars"] for info in docs.values())
-
-    t1 = test_leave_one_out(docs)
-    t2 = test_type_split(docs)
-    t3 = test_saturation_curve(docs)
-
-    verdict, explanation = generate_conclusion(t1, t2, t3, len(docs))
+    results = build_results(docs)
 
     print("=" * 50)
-    print(f"  {verdict}")
+    print(f"  {results['verdict']}")
     print("=" * 50)
-    print(f"  {explanation}")
+    print(f"  {results['one_line']}")
     print("=" * 50)
-    print(f"  文档数: {len(docs)} 篇 | 总字数: {total_chars:,} 字")
-    print(f"  留一法波动: {t1['avg_distance']:.3f}")
-    n4 = t3.get(4, {})
-    n5 = t3.get(5, {})
-    if n4 and n5:
-        gain = n5["avg_top6_overlap"] - n4["avg_top6_overlap"]
-        print(f"  饱和度增益(4→5篇): +{gain:.1f} 特征")
+    print(f"  文档数: {results['total_docs']} 篇 | 总字数: {results['total_chars']:,} 字 | 分级: {results['severity']}")
     print("=" * 50)
 
     output_json.parent.mkdir(parents=True, exist_ok=True)
-    results = {
-        "total_docs": len(docs),
-        "total_chars": total_chars,
-        "verdict": verdict,
-        "explanation": explanation,
-        "doc_list": {n: {"tag": docs[n]["tag"], "chars": docs[n]["chars"]} for n in names},
-        "test1_leave_one_out": t1,
-        "test2_type_split": {k: v for k, v in t2.items() if k not in ("same_type_2docs", "cross_type_3docs", "all_5docs")},
-        "test2_detail": {
-            "same_type_top6": t2["same_type_2docs"]["rank_top6"],
-            "cross_type_top6": t2["cross_type_3docs"]["rank_top6"],
-            "all_top6": t2["all_5docs"]["rank_top6"],
-            "same_vs_all": t2["same_vs_all_distance"],
-            "cross_vs_all": t2["cross_vs_all_distance"],
-        },
-        "test3_saturation": t3,
-    }
     output_json.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_md.parent.mkdir(parents=True, exist_ok=True)
+    output_md.write_text(build_md(results), encoding="utf-8")
 
-    md_lines = []
-    md_lines.append(f"# 样本量充足性测试报告\n")
-    md_lines.append(f"> **{verdict}** — {explanation}\n")
-    md_lines.append(f"**输入**：{len(docs)} 篇文档，总字数 {total_chars:,} 字符\n")
-    md_lines.append("| 编号 | 类型 | 文件 | 字数 |")
-    md_lines.append("|:---:|:---|:---|:---:|")
-    for i, n in enumerate(names, 1):
-        md_lines.append(f"| {i} | {docs[n]['tag']} | {n[:30]}... | {docs[n]['chars']} |")
-    md_lines.append("")
-
-    md_lines.append("## Test 1: 留一法稳定性\n")
-    md_lines.append("逐一去掉 1 篇，看剩余 4 篇的特征排序是否与全量 5 篇一致。距离越接近 0 越稳。\n")
-    md_lines.append("| 去掉的文档 | 子集篇数 | 排名距离 | 判定 |")
-    md_lines.append("|:---|:---:|:---:|:---:|")
-    for r in t1["per_doc"]:
-        flag = "✅" if r["rank_distance"] < 0.25 else "⚠️" if r["rank_distance"] < 0.4 else "❌"
-        md_lines.append(f"| {r['removed'][:25]}... | 4 | {r['rank_distance']} | {flag} |")
-    md_lines.append(f"\n**平均距离：{t1['avg_distance']}**")
-    md_lines.append(f"**结论：{'✅ 5篇特征排序稳定' if t1['stable'] else '❌ 5篇不够稳，建议增加到8篇'}**\n")
-
-    md_lines.append("## Test 2: 同型 vs 异型拆分\n")
-    md_lines.append("比较同类型文档组（入园企业2篇，背景段高度共用）与跨类型文档组（3种不同类型各1篇）的特征排序差异。\n")
-    md_lines.append(f"- 同型2篇 vs 全量5篇距离：**{t2['same_vs_all_distance']}**")
-    md_lines.append(f"- 异型3篇 vs 全量5篇距离：**{t2['cross_vs_all_distance']}**")
-    md_lines.append(f"\n| 组别 | Top-6 特征 |")
-    md_lines.append("|:---|:---|")
-    md_lines.append(f"| 同型2篇 | {', '.join(t2['same_type_2docs']['rank_top6'][:6])} |")
-    md_lines.append(f"| 异型3篇 | {', '.join(t2['cross_type_3docs']['rank_top6'][:6])} |")
-    md_lines.append(f"| 全量5篇 | {', '.join(t2['all_5docs']['rank_top6'][:6])} |")
-    if t2['cross_vs_all_distance'] < t2['same_vs_all_distance']:
-        md_lines.append(f"\n**结论：异型3篇比同型2篇更接近全量结果 → 类型多样性比篇数更重要。**\n")
-    else:
-        md_lines.append(f"\n**结论：同型与异型差距不大 → 当前5篇类型覆盖已基本够用。**\n")
-
-    md_lines.append("## Test 3: 特征饱和度曲线\n")
-    md_lines.append("对所有可能组合（1篇到5篇）抽取特征，看 top-6 特征与全量结果的重叠数随篇数变化。\n")
-    md_lines.append("| 篇数 | 组合数 | 平均排名距离 | 平均 top6 重叠 | 趋势 |")
-    md_lines.append("|:---:|:---:|:---:|:---:|:---:|")
-    prev_overlap = 0
-    for n in sorted(t3.keys()):
-        v = t3[n]
-        bar = "█" * int(v["avg_top6_overlap"] / 2)
-        trend = ""
-        if v["avg_top6_overlap"] > prev_overlap + 0.5:
-            trend = "↑ 陡升"
-        elif v["avg_top6_overlap"] > prev_overlap + 0.1:
-            trend = "↗ 缓升"
-        else:
-            trend = "→ 平"
-        md_lines.append(f"| {n} | {v['combinations']} | {v['avg_rank_distance']} | {v['avg_top6_overlap']}/6 {bar} | {trend} |")
-        prev_overlap = v["avg_top6_overlap"]
-
-    # 判断是否饱和
-    if len(t3) >= 2:
-        n4 = t3.get(4, {})
-        n5 = t3.get(5, {})
-        if n4 and n5:
-            gain = n5["avg_top6_overlap"] - n4["avg_top6_overlap"]
-            if gain < 0.5:
-                md_lines.append(f"\n**结论：从4篇到5篇仅增加 {gain:.1f} 个重叠特征 → 曲线已趋平，5篇接近饱和。建议当前篇数可维持，如需扩展优先增加不同类型文档。**\n")
-            else:
-                md_lines.append(f"\n**结论：从4篇到5篇增加 {gain:.1f} 个重叠特征 → 曲线仍在上升，建议增加到8篇。**\n")
-
-    md_lines.append("## 综合建议\n")
-    md_lines.append("| 指标 | 数值 | 阈值 | 结论 |")
-    md_lines.append("|:---|:---:|:---|:---|")
-    stable = t1["avg_distance"] < 0.25
-    md_lines.append(f"| 留一法稳定性 | {t1['avg_distance']} | <0.25 | {'✅ 通过' if stable else '❌ 不通过'} |")
-    cross_better = t2['cross_vs_all_distance'] < t2['same_vs_all_distance']
-    md_lines.append(f"| 类型多样性收益 | 异型距离{t2['cross_vs_all_distance']} vs 同型{t2['same_vs_all_distance']} | 异型更小 | {'✅ 多样性有效' if cross_better else '⚠️ 差异不大'} |")
-    sat = n5["avg_top6_overlap"] - n4["avg_top6_overlap"] < 0.5
-    md_lines.append(f"| 饱和度 | 4→5篇增益={n5['avg_top6_overlap'] - n4['avg_top6_overlap']:.1f} | <0.5 | {'✅ 接近饱和' if sat else '❌ 仍在上升'} |")
-
-    if stable and cross_better and sat:
-        md_lines.append(f"\n### 最终结论：✅ 当前 5 篇够用，无需追加。")
-        md_lines.append(f"如果后续想增强，优先加不同类型的 2-3 篇，而非同类型堆量。")
-    elif stable and not sat:
-        md_lines.append(f"\n### 最终结论：⚠️ 5 篇可用但不稳，建议加到 8 篇。")
-    else:
-        md_lines.append(f"\n### 最终结论：❌ 5 篇偏少，留一法不稳定，建议加到 8 篇。")
-
-    output_md.write_text("\n".join(md_lines), encoding="utf-8")
     print(f"\n报告已保存: {output_md}")
     print(f"详细数据:  {output_json}")
 
