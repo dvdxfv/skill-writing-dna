@@ -46,11 +46,14 @@ Added:
 - English natural-language triggers: `remove AI flavor`, `make it sound like me`, and `personal writing style`.
 - Long-document rewriting: long drafts are rewritten by chapter, then checked for terminology, numbers, and heading consistency.
 - Adjustable rewrite context: specify publication context and rewrite strength, such as social post, formal report, lighter edit, or deeper rewrite.
+- Rewrite conflict priority: when goals conflict, the order is information preservation → blacklist removal → natural signature-phrase use → sentence rhythm alignment, so style imitation does not override factual integrity.
 
 Fixed:
 
 - Fixed `run.py extract` / `auto` failing because the extraction command did not pass `--input`.
 - Fixed sample sufficiency diagnostics crashing when fewer than 5 samples were provided.
+- Fixed unsafe hard deletion of blacklisted phrases and mechanical signature insertion that could produce broken sentences; risky edits are now replaced safely or deferred for semantic rewriting.
+- Fixed feature-cloud and report wording: features marked as template artifacts or downgraded no longer reappear in the cloud; reports separate applied rules, not-applied rules, and downgraded references.
 
 ---
 
