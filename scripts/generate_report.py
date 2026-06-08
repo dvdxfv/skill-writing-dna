@@ -9,6 +9,12 @@ import json
 import sys
 from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from validate_rewrite_against_dna import validate_rewrite
+
 
 def configure_utf8_stdio() -> None:
     for stream in (sys.stdout, sys.stderr):
@@ -59,7 +65,8 @@ def build_report(original: str, rewritten: str, dna: dict, debug: dict) -> str:
 
     removed_bl = changes.get("blacklist_phrases_removed", [])
     removed_conn = changes.get("ai_connectors_removed", [])
-    injected = changes.get("signature_phrases_injected", [])
+    matched_signatures = changes.get("signature_phrases_matched", changes.get("signature_phrases_injected", []))
+    signature_suggestions = changes.get("signature_phrase_suggestions", [])
 
     lines.append("## ✏️ 改动明细\n")
 
@@ -81,9 +88,14 @@ def build_report(original: str, rewritten: str, dna: dict, debug: dict) -> str:
             lines.append(f"- `{c}` → 自然过渡")
         lines.append("")
 
-    if injected:
-        lines.append("### 植入的签名短语\n")
-        for s in injected:
+    if matched_signatures:
+        lines.append("### 自然命中的签名表达\n")
+        for s in matched_signatures:
+            lines.append(f"- `{s}`")
+        lines.append("")
+    if signature_suggestions:
+        lines.append("### 可供二次改写参考的候选表达\n")
+        for s in signature_suggestions:
             lines.append(f"- `{s}`")
         lines.append("")
 
@@ -92,6 +104,23 @@ def build_report(original: str, rewritten: str, dna: dict, debug: dict) -> str:
         for i, rule in enumerate(rules, 1):
             lines.append(f"{i}. {rule}")
         lines.append("")
+
+    validation = validate_rewrite(rewritten, dna, debug)
+    sent = validation["sentence_alignment"]
+    sig = validation["signature_alignment"]
+    bl = validation["blacklist_residuals"]
+    slop_residuals = validation["ai_slop_residuals"]
+    opener = validation["opener_alignment"]
+    lines.append("## 🧭 DNA 对齐验证\n")
+    lines.append("| 指标 | 结果 |")
+    lines.append("|:---|:---|")
+    lines.append(
+        f"| 句长偏差 | 平均 {sent['avg_length_chars']} 字 / 目标 {sent['target_avg_length_chars'] or '未知'} / 状态 {sent['status']} |"
+    )
+    lines.append(f"| 签名表达命中 | {len(sig['matched'])}/{sig['total']} |")
+    lines.append(f"| 黑名单残留 | {bl['hit_count']} 处 |")
+    lines.append(f"| AI 味残留 | 分数 {slop_residuals['score']} / 命中 {slop_residuals['hit_count']} |")
+    lines.append(f"| 开头模式 | {opener['status']} / 匹配分 {opener['score'] if opener['score'] is not None else '未知'} |\n")
 
     downgraded = skipped.get("downgraded", [])
     not_applied = skipped.get("not_applied", [])

@@ -291,8 +291,10 @@ DNA 只能从模板之外，或模板内部的个人表达差异中提。
 - `detect_ai_slop.py`
 - `rewrite_with_dna.py`
 - `generate_report.py`
+- `validate_rewrite_against_dna.py`
+- `check_tool_config_sync.py`
 
-其中前 3 个是输入治理层，`test_sample_sufficiency.py` 是提取前的样本质量闸门，`dna_versioning.py` 负责 DNA 指针和历史版本，后 4 个是风格处理层。
+其中前 3 个是输入治理层，`test_sample_sufficiency.py` 是提取前的样本质量闸门，`dna_versioning.py` 负责 DNA 指针和历史版本，`rewrite_with_dna.py` 只做确定性辅助，`validate_rewrite_against_dna.py` 为第三确认点提供客观验证锚点，`check_tool_config_sync.py` 用于降低多工具入口副本漂移风险。
 
 ## 8. 当前决策规则
 

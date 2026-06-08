@@ -204,6 +204,12 @@ def remove_ai_connectors(text: str) -> tuple[str, list[str]]:
 
 
 def apply_signature_injection(text: str, signatures: list[str], rate_per_200chars: int = 1) -> tuple[str, list[str]]:
+    """Return signature phrases that already appear naturally.
+
+    This helper intentionally does not inject text. Mechanical insertion made
+    earlier acceptance outputs less readable; semantic placement belongs to the
+    conversation LLM and the post-rewrite validation report.
+    """
     if not signatures or not text:
         return text, []
     matched = []
@@ -213,7 +219,40 @@ def apply_signature_injection(text: str, signatures: list[str], rate_per_200char
     return text, matched
 
 
+def suggest_signature_candidates(text: str, signatures: list[str], limit: int = 5) -> list[str]:
+    """List signature phrases that could be considered in a second LLM pass."""
+    return [sig for sig in signatures if sig and sig not in text][:limit]
+
+
+def analyze_opener_alignment(text: str, openers: list[str]) -> dict[str, Any]:
+    first = next((s.strip() for s in re.split(r"[。！？!?\n]+", text) if s.strip()), "")
+    openers = [o for o in openers if isinstance(o, str) and o.strip()]
+    if not first or not openers:
+        return {"status": "unknown", "first_sentence": first[:80], "best_match": None, "score": None}
+
+    def prefix_score(a: str, b: str) -> float:
+        limit = min(len(a), len(b), 20)
+        if limit == 0:
+            return 0.0
+        same = 0
+        for i in range(limit):
+            if a[i] != b[i]:
+                break
+            same += 1
+        return same / limit
+
+    best = max(openers, key=lambda opener: prefix_score(first, opener))
+    score = round(prefix_score(first, best), 3)
+    return {
+        "status": "ok" if score >= 0.35 else "review",
+        "first_sentence": first[:80],
+        "best_match": best[:80],
+        "score": score,
+    }
+
+
 def adjust_opener(text: str, openers: list[str]) -> str:
+    """Keep text unchanged; opener fit is reported via analyze_opener_alignment."""
     return text
 
 
@@ -226,6 +265,8 @@ def build_debug_info(
     removed_blacklist: list[dict],
     removed_connectors: list[str],
     injected_signatures: list[str],
+    signature_suggestions: list[str] | None = None,
+    opener_alignment: dict[str, Any] | None = None,
 ) -> dict:
     uncertain = dna.get("uncertain_candidates", [])
     applied_uncertain = [
@@ -252,7 +293,10 @@ def build_debug_info(
         "changes": {
             "blacklist_phrases_removed": removed_blacklist,
             "ai_connectors_removed": removed_connectors,
-            "signature_phrases_injected": injected_signatures,
+            "signature_phrases_injected": injected_signatures,  # backward-compatible key
+            "signature_phrases_matched": injected_signatures,
+            "signature_phrase_suggestions": signature_suggestions or [],
+            "opener_alignment": opener_alignment or {},
         },
         "dna_rules_applied": get_rewrite_rules(dna),
         "skipped_dna_rules": {
@@ -289,7 +333,9 @@ def main():
     text, removed_bl = apply_blacklist_removal(text, blacklist)
     text, removed_conn = remove_ai_connectors(text)
     text, injected_sigs = apply_signature_injection(text, signatures)
+    signature_suggestions = suggest_signature_candidates(text, signatures)
     text = adjust_opener(text, openers)
+    opener_alignment = analyze_opener_alignment(text, openers)
 
     slop_after = detect_ai_slop_in_text(text, blacklist)
 
@@ -297,6 +343,8 @@ def main():
         original_clean, text, dna,
         slop_before, slop_after,
         removed_bl, removed_conn, injected_sigs,
+        signature_suggestions=signature_suggestions,
+        opener_alignment=opener_alignment,
     )
 
     output_md = Path(args.output_md)
@@ -313,7 +361,7 @@ def main():
     print(f"   AI味分数: {slop_before['score']} → {slop_after['score']}")
     print(f"   清除黑名单词: {len(removed_bl)} 个")
     print(f"   清除AI连接词: {len(removed_conn)} 个")
-    print(f"   植入签名短语: {len(injected_sigs)} 个")
+    print(f"   自然命中签名表达: {len(injected_sigs)} 个")
     print(f"   输出文件: {output_md}")
     print(f"   调试信息: {output_json}")
 

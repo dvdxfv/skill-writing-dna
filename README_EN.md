@@ -37,6 +37,19 @@ See [AI_INSTALL.md](AI_INSTALL.md) for the full install checklist. Its installer
 
 ## Changelog
 
+### 2026-06-08
+
+Added:
+
+- Post-rewrite DNA alignment validation: reports sentence-length deviation, signature-expression matches, blacklist residuals, AI-slop residuals, opener-pattern fit, and not-applied / downgraded rules for the third checkpoint.
+- Public minimal test suite: sanitized pytest coverage for sample precheck, DNA versioning, rewrite safety, report wording, and the validation script.
+- Tool-entrypoint sync check: verifies Trae / Cursor / Claude Code / VS Code / Codex entrypoints keep critical instructions aligned, reducing multi-copy maintenance risk.
+
+Changed:
+
+- Signature expressions are no longer described as mechanical insertion; the wording is now natural matches, candidate suggestions, and second-pass rewrite guidance.
+- Boundary clarified: Writing DNA is not a pure-script semantic rewriter. High-quality rewriting still depends on the current AI model; scripts provide detection, constraints, validation, reporting, and safety assistance.
+
 ### 2026-05-24
 
 Added:
@@ -507,6 +520,8 @@ Try in priority order:
 
 This tool changes **how you write**, not **what structure you wrote**. Please understand the following limitations to avoid unrealistic expectations:
 
+Semantic rewriting still depends on the AI model you are using. Writing DNA's scripts organize samples, DNA, rules, validation metrics, and reports; they provide deterministic checks and quality anchors, but they are not a standalone Python semantic rewriter.
+
 ### What It Cannot Do
 
 | Limitation | Reason |
@@ -706,12 +721,15 @@ writing-dna/
 │   ├── extract_dna.py                  # DNA feature extraction
 │   ├── filter_non_prose.py             # non-prose content filter
 │   ├── generate_report.py              # rewrite comparison report
+│   ├── check_tool_config_sync.py        # tool-entrypoint sync checker
 │   ├── install_ai_tool_commands.py     # multi-tool auto-installer
 │   ├── md_to_docx.py                   # Markdown → DOCX conversion
 │   ├── render_dna_feature_cloud.py     # DNA feature cloud renderer
 │   ├── rewrite_with_dna.py             # DNA-driven rewrite engine
 │   ├── strip_template.py               # Layer 1 template stripper
-│   └── test_sample_sufficiency.py      # sample sufficiency diagnosis
+│   ├── test_sample_sufficiency.py      # sample sufficiency diagnosis
+│   └── validate_rewrite_against_dna.py # post-rewrite DNA alignment validator
+├── tests/                              # public minimal regression tests
 ├── AI_INSTALL.md                       # AI tool install checklist
 ├── CLAUDE.md                           # Claude Code project rules
 ├── README.md                           # project readme (Chinese)
@@ -723,4 +741,4 @@ writing-dna/
 └── run.py                              # one-click pipeline entrypoint
 ```
 
-> **About the test suite**: The automated tests live in a local `tests/` directory (pytest, for development-time regression and acceptance checks). This directory is excluded wholesale via `.gitignore` and is **not uploaded to GitHub**, which is why it does not appear in the tree above — not seeing `tests/` after cloning is expected.
+> **About the test suite**: The repository now includes a sanitized minimal pytest suite. Manual acceptance checklists and private sample material remain local-only.

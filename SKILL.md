@@ -431,12 +431,14 @@ python3 scripts/detect_ai_slop.py --text <input> --dna <dna.json> --output ai_sc
 调用：
 ```bash
 python3 scripts/generate_report.py --original <orig> --rewritten outputs/rewrite_runs/rewritten_draft.md --dna <dna.json> --debug-json outputs/rewrite_runs/rewrite_debug.json --output-md outputs/rewrite_runs/report.md
+python3 scripts/validate_rewrite_against_dna.py --rewritten outputs/rewrite_runs/rewritten_draft.md --dna <dna.json> --debug-json outputs/rewrite_runs/rewrite_debug.json --output-json outputs/rewrite_runs/rewrite_validation.json --output-md outputs/rewrite_runs/rewrite_validation.md
 ```
 
 报告包含：
 - 改写前 / 改写后双栏对照（适合截图发参赛贴）
 - 关键指标：AI 味分数变化、风格匹配度、套话清除数、信息点保留率
-- 命中的签名短语清单
+- 自然命中的签名表达与可供二次改写参考的候选表达
+- DNA 对齐验证：句长偏差、黑名单残留、AI 味残留、开头模式匹配、未应用 / 降权规则
 - 清除掉的套话清单（让用户知道改了什么）
 
 **Step 4：⏸️ 必须停下，等用户确认效果满不满意**
@@ -446,6 +448,7 @@ python3 scripts/generate_report.py --original <orig> --rewritten outputs/rewrite
 生成完对比报告后，你必须：
 1. 把 `report.md`（对比报告）的**关键结论**展示给用户——重点展示：AI味分数变化、套话清除了哪些、签名短语命中了哪些
    - **同时告诉用户完整路径**："完整对比报告已保存到 `outputs/rewrite_runs/report.md`"
+   - **同时展示 `rewrite_validation.md` 的关键指标**：句长偏差、签名表达命中、黑名单残留、开头模式匹配；告诉用户路径 `outputs/rewrite_runs/rewrite_validation.md`
    - 如果报告或调试信息显示有规则被跳过、降权、未命中，必须补一句："有 N 条规则这次没应用（样本不稳 / 会伤信息），想知道哪几条说一声。" 用户追问"哪几条没应用 / 为什么没应用"时，列出具体规则和原因。
 2. **把改写后的全文（`rewritten_draft.md`）展示给用户**——让用户通读
    - **同时告诉用户完整路径**："改写后全文已保存到 `outputs/rewrite_runs/rewritten_draft.md`"
@@ -457,7 +460,7 @@ python3 scripts/generate_report.py --original <orig> --rewritten outputs/rewrite
 | # | 检查项 | 怎么看 | 不对劲怎么办 |
 |:---:|:---|:---|:---|
 | 1 | **AI 味消了吗？** | 读一遍还有没有"赋能/重塑/综上所述/首先其次"这类味道？ | 指出残留的句子 → 模型针对性重写 |
-| 2 | **像我自己写的吗？** | 签名短语植入自然吗？句长/段落节奏对吗？有没有像演员模仿的痕迹？ | 指出不像的地方 → 调整 DNA 参数后重跑 |
+| 2 | **像我自己写的吗？** | 签名表达是自然命中还是硬凑？句长/段落节奏对吗？有没有像演员模仿的痕迹？ | 指出不像的地方 → 参考验证报告调整 DNA 或定点重写 |
 | 3 | **信息丢了吗？** | 原文的事实、数字、结论都在吗？有没有被改写时遗漏或歪曲？ | 指出丢失的信息 → 补回 |
 | 4 | **可以直接用吗？** | 整体读下来能不能直接发布/提交？还是还需要你自己再改一轮？ | "还需要微调" → 让用户指出具体段落 → 定点修改 |
 
@@ -476,8 +479,9 @@ python3 scripts/generate_report.py --original <orig> --rewritten outputs/rewrite
 
 - 输出四个文件到工作目录：
   - `outputs/rewrite_runs/rewritten_draft.md`（Markdown 最终稿）
-  - `outputs/rewrite_runs/report.md`（对比报告）
-  - `outputs/rewrite_runs/rewrite_debug.json`（详细指标）
+- `outputs/rewrite_runs/report.md`（对比报告）
+- `outputs/rewrite_runs/rewrite_debug.json`（详细指标）
+- `outputs/rewrite_runs/rewrite_validation.md/json`（DNA 对齐验证，客观辅助第三确认点）
   - `outputs/rewrite_runs/rewritten_draft.docx`（可选 DOCX 最终稿，WPS/Word 可直接打开）
 - 用户确认满意且需要 DOCX 时，再生成 DOCX：`python3 scripts/md_to_docx.py --input outputs/rewrite_runs/rewritten_draft.md --output outputs/rewrite_runs/rewritten_draft.docx`
 - 在对话里给用户**简短**总结（不要复述全部对比），重点是："改写完成，AI 味从 X 降到 Y，套话清了 N 个。完整对比见 outputs/rewrite_runs/report.md。"
@@ -537,8 +541,10 @@ python3 scripts/generate_report.py --original <orig> --rewritten outputs/rewrite
 - `scripts/extract_dna.py`：DNA 提取（自动统计+人工复核；输入必须为 strip_template 处理后的样本）
 - `scripts/detect_ai_slop.py`：AI 味检测
 - `scripts/ai_slop_dict.py`：AI 套话词典
-- `scripts/rewrite_with_dna.py`：DNA 改写（黑名单清除+AI连接词替换+签名植入）
+- `scripts/rewrite_with_dna.py`：DNA 改写辅助（黑名单清除+AI连接词替换+签名表达命中/候选建议）
 - `scripts/generate_report.py`：对比报告生成器（指标表+改动明细+原文对照）
+- `scripts/validate_rewrite_against_dna.py`：改写后 DNA 对齐验证
+- `scripts/check_tool_config_sync.py`：多工具入口一致性检查
 - `scripts/md_to_docx.py`：Markdown 转 DOCX（WPS/Word 可打开的中文友好文档）
 - `scripts/render_dna_feature_cloud.py`：DNA 特征云可视化
 - `docs/writing-dna-architecture.md`：系统架构说明

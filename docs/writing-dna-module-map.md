@@ -164,8 +164,9 @@
 
 职责：
 
-- 根据 DNA 和模板约束改写新草稿
-- 只承担确定性辅助改写，不负责重排长文结构
+- 根据 DNA 和模板约束做确定性辅助改写
+- 不机械塞签名表达、不强行替换首段；输出自然命中和候选建议供 LLM 二次改写参考
+- 只承担确定性辅助，不负责重排长文结构
 - 长文“按章节改、合并后统一术语/数字/标题层级”的行为由 `SKILL.md` / live prompt 入口驱动
 
 输入：
@@ -176,7 +177,7 @@
 
 输出：
 
-- `outputs/rewrite_runs/rewritten.md`
+- `outputs/rewrite_runs/rewritten_draft.md`
 - `outputs/rewrite_runs/rewrite_debug.json`
 
 ### 3.7 `scripts/generate_report.py`
@@ -194,7 +195,33 @@
 
 输出：
 
-- `outputs/reports/report.md`
+- `outputs/rewrite_runs/report.md`
+
+### 3.8 `scripts/validate_rewrite_against_dna.py`
+
+职责：
+
+- 改写后 DNA 对齐验证，只报告指标，不直接改写文本
+- 检查句长偏差、签名表达命中、黑名单残留、AI 味残留、开头模式匹配、未应用 / 降权规则
+- 作为第三确认点的客观辅助数据，降低“只凭感觉判断像不像”的不稳定性
+
+输入：
+
+- 改写稿
+- DNA 文件
+- 可选 `rewrite_debug.json`
+
+输出：
+
+- `outputs/rewrite_runs/rewrite_validation.json`
+- `outputs/rewrite_runs/rewrite_validation.md`
+
+### 3.9 `scripts/check_tool_config_sync.py`
+
+职责：
+
+- 检查 Trae / Cursor / Claude Code / VS Code / Codex 入口是否包含关键同步标记
+- 不生成或覆盖入口文件，仅作为多副本维护风险的公开检查器
 
 ## 4. 开发顺序
 
@@ -207,9 +234,10 @@
 5. `detect_ai_slop.py`
 6. `rewrite_with_dna.py`
 7. `generate_report.py`
+8. `validate_rewrite_against_dna.py`
 
 ## 5. 当前结论
 
-现在不做测试，先把模块边界锁住。
+当前仓库公开最小 pytest 回归测试；人工验收清单和私有样本仍留在本地。
 
 后续如果实现偏离这个模块图，必须先改文档，再改代码。

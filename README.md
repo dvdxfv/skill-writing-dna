@@ -35,6 +35,19 @@
 
 ## 更新日志
 
+### 2026-06-08
+
+新增：
+
+- 改写后 DNA 对齐验证：报告句长偏差、签名表达命中、黑名单残留、AI 味残留、开头模式匹配和未应用 / 降权规则，辅助第三确认点判断。
+- 公开最小测试集：上传脱敏 pytest 测试，覆盖样本预检、DNA 版本、改写安全、报告口径和验证脚本。
+- 多工具入口一致性检查：新增脚本检查 Trae / Cursor / Claude Code / VS Code / Codex 入口是否同步关键指令，降低多副本维护风险。
+
+调整：
+
+- 签名表达不再表述为“机械植入”，改为“自然命中 / 候选建议 / 二次改写参考”。
+- 明确边界：Writing DNA 不是纯脚本语义改写器；高质量改写仍依赖当前 AI 模型，脚本负责检测、约束、验证、报告和安全辅助。
+
 ### 2026-05-24
 
 新增：
@@ -541,6 +554,8 @@ DeepSeek V4 Pro 在此次改写任务中明显区别于前四个保守模型，�
 
 这个工具改的是**"怎么写"**，不改**"写了什么结构"**。以下限制请提前了解，避免不切实际的期望：
 
+语义级改写仍依赖你当前使用的 AI 模型。Writing DNA 的脚本负责把样本、DNA、规则、验证指标和报告组织起来，提供确定性检测与质量锚点；它不是一个脱离 LLM 的纯 Python 改写器。
+
 ### 不能做的事
 
 | 限制 | 原因 |
@@ -625,12 +640,15 @@ writing-dna/
 │   ├── extract_dna.py                  # DNA 特征提取
 │   ├── filter_non_prose.py             # 非正文内容过滤
 │   ├── generate_report.py              # 改写对比报告生成
+│   ├── check_tool_config_sync.py        # 多工具入口一致性检查
 │   ├── install_ai_tool_commands.py     # 多工具自动安装器
 │   ├── md_to_docx.py                   # Markdown → DOCX 转换
 │   ├── render_dna_feature_cloud.py     # DNA 特征云渲染
 │   ├── rewrite_with_dna.py             # 按 DNA 画像改写
 │   ├── strip_template.py               # Layer1 模板剥离
-│   └── test_sample_sufficiency.py      # 样本充足性诊断
+│   ├── test_sample_sufficiency.py      # 样本充足性诊断
+│   └── validate_rewrite_against_dna.py # 改写后 DNA 对齐验证
+├── tests/                              # 公开最小回归测试（脱敏 fixture）
 ├── AI_INSTALL.md                       # AI 工具安装清单
 ├── CLAUDE.md                           # Claude Code 项目规则
 ├── README.md                           # 项目说明（本文件）
@@ -642,6 +660,6 @@ writing-dna/
 └── run.py                              # 全流程一键入口
 ```
 
-> **关于测试目录**：自动化测试套件在本地 `tests/`（pytest，用于开发期回归与验收）。该目录已在 `.gitignore` 中整体排除，**不随仓库上传 GitHub**，所以上面的结构树里没有它——克隆后看不到 `tests/` 属于预期。
+> **关于测试目录**：仓库公开一组脱敏的最小 pytest 回归测试。人工验收清单和私有素材仍保留在本地，不随仓库上传。
 
 ---
